@@ -17,7 +17,6 @@
 - [Compact Worked Example](#compact-worked-example)
 - [What This Process Does Not Solve](#what-this-process-does-not-solve)
 - [How to Measure Whether It Helps](#how-to-measure-whether-it-helps)
-- [Relationship to Broader Best Practices](#relationship-to-broader-best-practices)
 - [Selected Supporting References](#selected-supporting-references)
 - [Conclusion](#conclusion)
 - [Supporting Skill](#supporting-skill)
@@ -34,10 +33,10 @@ The payoff is simple: less scope drift, clearer review points, better handoffs, 
 
 If you want the shortest usable version of this workflow, do this:
 
-1. The developer writes a short spec in `docs/NNN-spec.md`.
+1. The developer writes a short spec in `docs/NNN-spec.md` or `docs/NNN-<label>-spec.md`.
 2. The AI reviews the spec for ambiguity, missing constraints, and risky assumptions.
-3. The AI captures unresolved questions in `docs/NNN-questions.md`, and the developer answers them.
-4. The AI folds those answers back into the spec and either deletes `docs/NNN-questions.md` if clarification is complete or refreshes it with only the remaining unresolved items.
+3. The AI captures unresolved questions in `docs/NNN-questions.md` or `docs/NNN-<label>-questions.md`, and the developer answers them.
+4. The AI folds those answers back into the spec and either deletes the questions file if clarification is complete or refreshes it with only the remaining unresolved items.
 5. Steps 3 and 4 repeat until the spec is clear enough to plan.
 6. The developer reviews and approves the working spec.
 7. The AI generates a phased plan, and the developer reviews it, either requesting revisions or approving it.
@@ -272,7 +271,7 @@ This shifts the conversation from “write code” to “clarify intent.”
 
 ### 3. Capture Open Questions in `NNN-questions.md`
 
-Inline clarification in chat often becomes noisy and hard to reuse. A better pattern is for the AI to create a transient markdown artifact such as `docs/NNN-questions.md`.
+Inline clarification in chat often becomes noisy and hard to reuse. A better pattern is for the AI to create a transient markdown artifact such as `docs/NNN-questions.md` or `docs/NNN-<label>-questions.md`.
 
 That file captures:
 
@@ -282,9 +281,9 @@ That file captures:
 - edge-case prompts
 - missing acceptance criteria
 
-The developer answers the file directly. The AI then folds those answers back into the spec. If all important clarification is complete, `NNN-questions.md` should usually be deleted. If important questions remain, the AI refreshes `NNN-questions.md` so it contains only the still-unresolved questions. That clarification loop repeats until the spec is ready to plan. Only keep a resolved questions file if there is a specific reason to preserve it, and then mark it clearly as transient and obsolete.
+The developer answers the file directly. The AI then folds those answers back into the spec. If all important clarification is complete, the questions file should usually be deleted. If important questions remain, the AI refreshes it so it contains only the still-unresolved questions. That clarification loop repeats until the spec is ready to plan. Only keep a resolved questions file if there is a specific reason to preserve it, and then mark it clearly as transient and obsolete.
 
-Using the same numeric prefix as the related spec and plan reduces the chance of collisions when multiple workstreams are active at the same time. It also makes accidental commits less confusing if a transient questions file does end up in version control.
+Using the same numeric prefix as the related spec and plan reduces the chance of collisions when multiple workstreams are active at the same time. An optional label can make it easier for developers to recognize the workstream at a glance, as long as the same `NNN` and label are used consistently across related artifacts.
 
 ### 4. Freeze a Working Spec
 
@@ -307,7 +306,7 @@ After the developer approves the working spec, the AI should generate a plan tha
 - risks or blockers
 - out-of-scope notes
 
-A practical plan format is a markdown document such as `docs/001-plan.md`, where each phase is a section header and each task is tracked with checklist markers:
+A practical plan format is a markdown document such as `docs/001-plan.md` or `docs/001-auth-plan.md`, where each phase is a section header and each task is tracked with checklist markers:
 
 - `[ ]` not started
 - `[-]` in progress
@@ -413,6 +412,13 @@ A common naming convention is:
 - `docs/001-phase-01-review.md`
 - `docs/001-phase-01-retro.md`
 
+If you want a human-friendly hint in the filename, an optional label also works well:
+
+- `docs/001-auth-spec.md`
+- `docs/001-auth-plan.md`
+- `docs/001-auth-phase-01-review.md`
+- `docs/001-auth-phase-01-retro.md`
+
 Those updates are not the same as validation. Validation happens in the prior step. This step records the approved outcome so the project state is accurate for the next session, agent, or phase.
 
 The developer can then decide whether to continue to the next phase, revise the plan, or stop the cycle.
@@ -442,9 +448,13 @@ For teams or individuals using this process regularly, a simple opinionated file
 ```text
 docs/
   NNN-spec.md
+  NNN-<label>-spec.md
   NNN-plan.md
+  NNN-<label>-plan.md
   NNN-phase-01-review.md
+  NNN-<label>-phase-01-review.md
   NNN-phase-01-retro.md
+  NNN-<label>-phase-01-retro.md
   NNN+1-spec.md
   NNN+1-plan.md
 ```
@@ -453,13 +463,16 @@ Transient clarification artifact:
 
 ```text
 docs/NNN-questions.md
+docs/NNN-<label>-questions.md
 ```
 
 Recommended rules:
 
 - keep numbered artifacts for durable project state
-- keep `NNN-questions.md` transient
+- keep questions artifacts transient
 - use the same numeric prefix as the related spec and plan
+- if you use a label, keep the same label across the related spec, plan, questions, review, and retro artifacts
+- treat the label as optional and human-friendly; the numeric prefix remains the primary grouping key
 - use the same numeric prefix for one spec/plan cycle
 - update the checklist as work progresses
 - leave enough state in plan, review, and retro files for a fresh session to continue
@@ -470,7 +483,7 @@ Recommended rules:
 
 One small example makes the artifact pattern easier to picture.
 
-Example `docs/001-spec.md`:
+Example `docs/001-auth-spec.md`:
 
 ```md
 # Add CSV Export for Admin Reports
@@ -493,7 +506,7 @@ Allow admin users to export the current report view as CSV.
 - non-admin users do not see the export action
 ```
 
-Example `docs/001-questions.md`:
+Example `docs/001-auth-questions.md`:
 
 ```md
 # Open Questions
@@ -507,7 +520,7 @@ Example `docs/001-questions.md`:
 - Should export actions be logged for audit purposes?
 ```
 
-Example `docs/001-plan.md`:
+Example `docs/001-auth-plan.md`:
 
 ```md
 ## Phase 01 - Access and request flow
@@ -566,32 +579,6 @@ Teams adopting this workflow can evaluate it with simple practical signals:
 - more consistent documentation of tradeoffs and decisions
 
 The exact metrics will vary by team, but the point is to measure whether the workflow improves predictability, not just speed.
-
----
-
-## Relationship to Broader Best Practices
-
-Human-Gated Spec-Driven AI Development is not invented in isolation. It sits at the intersection of several established bodies of practice.
-
-### Human-in-the-Loop AI
-
-Human oversight is a core idea in responsible AI system design. In this workflow, the oversight mechanism is operationalized as explicit review gates.
-
-### AI Governance and Risk Management
-
-Risk management frameworks for AI emphasize governance, measurement, and managed operation. This workflow brings those ideas into day-to-day engineering practice by turning them into concrete checkpoints.
-
-### Agile and Incremental Delivery
-
-The process aligns well with incremental delivery and adaptation. The plan is not a rigid contract. It is a living document that is revised as the team learns.
-
-### Code Review and Code Health
-
-The workflow treats review as a code health mechanism, not just a bug-catching step. That distinction matters when AI can generate code faster than teams can comfortably reason about it.
-
-### Spec-Driven Development
-
-Emerging spec-driven approaches in AI-assisted coding reinforce the value of making the specification central rather than incidental.
 
 ---
 
@@ -701,6 +688,14 @@ Short form:
 ```text
 Review-spec for 006-spec.md
 ```
+
+Expected result:
+
+- the AI reviews the spec for ambiguity, contradictions, missing constraints, and likely implementation traps
+- the AI points out where the spec already aligns with the repo and where it conflicts or leaves risk unresolved
+- the result helps you decide whether the spec is already ready for planning, whether it should go into `generate-questions`, or whether you want to revise the spec first
+
+This stage does not start the question file by itself. It is a fast review and triage step before you decide whether to plan or enter the clarification loop.
 
 #### Generate clarification questions
 
@@ -832,19 +827,19 @@ This stage is optional. It is an AI assistant for the developer's final review, 
 
 One complete session might look like this:
 
-1. `Use the human-gated-spec-driven-ai-development skill to review-spec for docs/006-spec.md`
-2. `Use the human-gated-spec-driven-ai-development skill to generate-questions for 006-spec.md`
-3. answer `docs/006-questions.md`
-4. `Use the human-gated-spec-driven-ai-development skill to fold-questions from 006-questions.md into 006-spec.md`
-5. if the AI refreshed `docs/006-questions.md`, answer it and run `fold-questions` again
-6. once the AI resolves the questions, review and approve `docs/006-spec.md`
-7. `Use the human-gated-spec-driven-ai-development skill to generate-plan for 006-spec.md`
-8. review and approve `docs/006-plan.md`
-9. `Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 006-plan.md`
-10. review the code, tests, and plan updates
-11. optionally `Use the human-gated-spec-driven-ai-development skill to review-phase for 006-plan.md`
-12. repeat `implement-next-phase` and optional `review-phase` until complete
-13. optionally `Use the human-gated-spec-driven-ai-development skill to final-review for 006-spec.md and 006-plan.md`
+1. Developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to review-spec for docs/006-spec.md`
+2. Developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to generate-questions for 006-spec.md`
+3. Developer answers `docs/006-questions.md`
+4. Developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to fold-questions from 006-questions.md into 006-spec.md`
+5. If the AI refreshed `docs/006-questions.md`, the developer answers it and then asks the AI to run `fold-questions` again
+6. Once the AI resolves the questions, the developer reviews and approves `docs/006-spec.md`
+7. Developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to generate-plan for 006-spec.md`
+8. Developer reviews and approves `docs/006-plan.md`
+9. Developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 006-plan.md`
+10. Developer reviews the code, tests, and plan updates
+11. Optionally, developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to review-phase for 006-plan.md`
+12. Developer repeats `implement-next-phase` and optional `review-phase` until complete
+13. Optionally, developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to final-review for 006-spec.md and 006-plan.md`
 
 ### Example Lightweight Workflow
 

@@ -1,6 +1,6 @@
 ---
 name: human-gated-spec-driven-ai-development
-description: manage a local-filesystem workflow for human-gated spec-driven ai development using numbered markdown artifacts in docs/ such as 001-spec.md, 001-questions.md, and 001-plan.md. use when the user wants to review a spec, generate numbered questions artifacts, iteratively fold answered questions back into the spec until the spec is sufficient to generate a phased plan, generate or update that plan with checklist items, implement the next phase in red/green tdd style while updating plan status, review a completed phase, or run a final implementation review. supports bare filenames and markdown file links as artifact references.
+description: manage a local-filesystem workflow for human-gated spec-driven ai development using numbered markdown artifacts in docs/ such as 001-spec.md, 001-auth-spec.md, 001-questions.md, and 001-plan.md. use when the user wants to review a spec, generate numbered questions artifacts, iteratively fold answered questions back into the spec until the spec is sufficient to generate a phased plan, generate or update that plan with checklist items, implement the next phase in red/green tdd style while updating plan status, review a completed phase, or run a final implementation review. supports bare filenames and markdown file links as artifact references.
 ---
 
 Use this skill to run one stage at a time against a project on the local filesystem.
@@ -29,11 +29,11 @@ The standard gates are:
 
 - after `review-spec`, the user reviews the spec feedback and either revises the spec or asks for `generate-questions` or `generate-plan`
 - after `generate-questions`, the user answers `NNN-questions.md` and then asks for `fold-questions`
-- after `fold-questions`, the user either reviews the updated spec and generated plan or answers the refreshed `NNN-questions.md` if more clarification is still needed
-- after `generate-plan`, the user reviews the plan and asks for `implement-next-phase` if approved
-- after `implement-next-phase`, the user reviews the implementation evidence and asks for `review-phase` if they want the formal phase review recorded
+- after `fold-questions`, the user either reviews and approves the updated working spec or answers the refreshed `NNN-questions.md` if more clarification is still needed
+- after `generate-plan`, the user reviews the plan and either asks for plan revisions or asks for `implement-next-phase` if approved
+- after `implement-next-phase`, the user reviews the implementation evidence and optionally asks for `review-phase` if they want AI-assisted formal phase review recorded
 - after `review-phase`, the user decides whether to revise the phase or continue by asking for `implement-next-phase`
-- after `final-review`, the user decides whether the work is complete or needs another improvement cycle
+- after `final-review`, the user decides whether the work is complete or whether the AI should make another bounded improvement pass and return for review again
 
 ## Human responsibilities
 
@@ -49,17 +49,24 @@ The developer remains responsible for review, approval, and delivery actions out
 Assume the canonical artifact set below unless the repo clearly uses a compatible variant:
 
 - `docs/001-spec.md`
+- `docs/001-auth-spec.md`
 - `docs/001-plan.md`
+- `docs/001-auth-plan.md`
 - `docs/001-questions.md` for transient clarification work
+- `docs/001-auth-questions.md` for transient clarification work
 - `docs/001-phase-01-review.md`
+- `docs/001-auth-phase-01-review.md`
 - `docs/001-phase-01-retro.md`
+- `docs/001-auth-phase-01-retro.md`
 
 Use three-digit spec ids such as `001`, `002`, `003`.
+An optional label may appear between the numeric prefix and artifact type, for example `001-auth-spec.md`.
 Use two-digit phase ids such as `01`, `02`, `03` inside artifact names when phase-specific files are created.
 
 Accept either of these artifact reference styles:
 
 - bare filenames such as `001-plan.md`
+- bare filenames such as `001-auth-plan.md`
 - markdown links such as `[plan](docs/001-plan.md)` or `[](001-plan.md)`
 
 When a bare filename is provided, look for it in `docs/` first.
@@ -67,9 +74,15 @@ When a bare filename is provided, look for it in `docs/` first.
 For naming, prefer:
 
 - `docs/001-spec.md`
+- `docs/001-auth-spec.md`
 - `docs/001-plan.md`
+- `docs/001-auth-plan.md`
 - `docs/001-phase-01-review.md`
+- `docs/001-auth-phase-01-review.md`
 - `docs/001-phase-01-retro.md`
+- `docs/001-auth-phase-01-retro.md`
+
+The label is optional and exists only to help developers recognize the workstream at a glance. The three-digit numeric prefix remains the primary grouping key, and if a label is used it should stay consistent across the related artifact set.
 
 For tiny or low-risk work, a lighter version of the workflow is acceptable:
 
@@ -92,12 +105,16 @@ Treat these user intents as the standard stage commands:
 
 If the request is phrased naturally instead of using the command name, map it to the closest stage.
 
+If the user explicitly says `lightweight mode` or clearly asks for a lighter version of the workflow, use the lightweight variant described in this skill while preserving the same core gates: clarify intent before coding, pause for approval before implementation, and require evidence before calling the work complete.
+
 ## Required operating rules
 
 - Work on exactly one stage per invocation.
 - Treat the spec as the source of truth.
 - Treat the plan as a living artifact that must reflect current checklist state.
 - Do not silently expand scope into later phases.
+- Recommend a checkpoint commit after the working spec and plan are both approved, especially before risky implementation begins.
+- Recommend another checkpoint commit after a phase is approved and before the next phase starts.
 - Before `review-spec`, `generate-questions`, or `generate-plan`, inspect relevant local context such as nearby code, tests, schemas, configs, and readmes.
 - Prefer answering questions from the repository before asking the user.
 - Ask the user only about issues that remain unresolved after checking the local codebase and docs.
@@ -106,11 +123,10 @@ If the request is phrased naturally instead of using the command name, map it to
 - Before ending a gated stage, tell the user what to review and what stage to run next if approved.
 - Before ending a gated stage, include one or more concrete next-step prompts, for example `Use the human-gated-spec-driven-ai-development skill to generate-plan for 006-spec.md`.
 - During implementation, update code and tests in red/green tdd style whenever feasible.
-- After implementation, verify the project compiles and all relevant tests pass before marking work complete.
-- For `implement-next-phase`, run targeted tests during iteration when useful, but finish with a full project test suite run before declaring the phase ready for review.
+- After implementation, verify the project compiles and the full project test suite passes before marking a phase complete.
 - If compilation or tests fail, record the blocked state honestly in the plan and review artifacts.
-- Keep `NNN-questions.md` transient. After `fold-questions`, delete it by default when all questions are fully resolved and absorbed into the spec and plan. Only leave it behind if there is a specific reason to preserve it, and then mark it clearly transient and obsolete.
-- Treat `fold-questions` as the clarification-loop stage: after answers are added, update the spec as far as possible and then either generate the plan or produce a cleaner next set of unresolved questions.
+- Keep questions artifacts such as `NNN-questions.md` or `NNN-<label>-questions.md` transient. After `fold-questions`, delete them by default when all questions are fully resolved and absorbed into the spec. Only leave them behind if there is a specific reason to preserve them, and then mark them clearly transient and obsolete.
+- Treat `fold-questions` as the clarification-loop stage: after answers are added, update the spec as far as possible and then either delete the resolved questions file or produce a cleaner next set of unresolved questions.
 - Keep handoff notes in the plan, review, and retro artifacts rather than creating a separate handoff file.
 
 ## Plan requirements
@@ -153,7 +169,7 @@ Goal: [one concise sentence]
 ```
 ```
 
-For implementation stages, update checklist items as work progresses and leave the plan current at the end of the run.
+For implementation stages, update checklist items as work progresses and leave the plan current at the end of the run so the developer can see what is in progress, what was completed, and what is blocked.
 
 ## Stage-specific behavior
 
@@ -183,11 +199,17 @@ Use repo reconnaissance to call out where the spec already aligns with existing 
 
 Create or update the spec review in-place or in a review artifact if the user requests it. Prefer concise, actionable feedback.
 
+This stage is a triage step. It should help the developer decide which path comes next:
+
+- if the spec is already clear enough, the developer can approve it and move on to `generate-plan`
+- if the spec needs structured clarification, the developer should move on to `generate-questions`
+- if the spec needs direct revision first, the developer can revise it before continuing
+
 Consult `references/stage-templates.md` for the review structure.
 
 ### `generate-questions`
 
-Create `docs/NNN-questions.md` as a transient artifact using the same three-digit prefix as the related spec and plan.
+Create `docs/NNN-questions.md` or `docs/NNN-<label>-questions.md` as a transient artifact using the same three-digit prefix as the related spec and plan.
 
 Only include questions that remain unresolved after checking the relevant codebase and docs.
 
@@ -201,28 +223,30 @@ Consult `references/stage-templates.md` for the template.
 
 ### `fold-questions`
 
-Read the answered `docs/NNN-questions.md` and fold the answers into the spec. Remove ambiguity where possible. Preserve intent.
+Read the answered `docs/NNN-questions.md` or `docs/NNN-<label>-questions.md` and fold the answers into the spec. Remove ambiguity where possible. Preserve intent.
 
-Then decide whether the clarified spec is now sufficient to plan:
+Then decide whether clarification is complete:
 
-- if yes, update `docs/NNN-spec.md` and generate or update `docs/NNN-plan.md`
-- if not, update `docs/NNN-spec.md` as far as possible and regenerate `docs/NNN-questions.md` so it contains only the still-unresolved questions
+- if yes, update the related spec artifact and delete the related questions artifact by default
+- if not, update the related spec artifact as far as possible and regenerate the related questions artifact so it contains only the still-unresolved questions
 
-This stage is the single iterative clarification loop. Use it repeatedly until the spec is clear enough to produce a plan that is ready for review.
+This stage is the single iterative clarification loop. Use it repeatedly until the spec is clear enough for the developer to approve as the working spec.
 
-When this stage produces a plan and all questions are fully resolved, delete `docs/NNN-questions.md` by default.
+When this stage resolves all questions, delete the related questions artifact by default.
 
-Only keep the questions file after planning if there is a specific reason to preserve it for audit or handoff purposes, and then mark it clearly transient and obsolete.
+Only keep the questions file after clarification if there is a specific reason to preserve it for audit or handoff purposes, and then mark it clearly transient and obsolete.
 
-When this stage still leaves open questions, keep `docs/NNN-questions.md` current and do not generate a partial or speculative plan that still depends on unresolved product decisions.
+When this stage still leaves open questions, keep the related questions artifact current and do not generate a partial or speculative plan that still depends on unresolved product decisions.
 
 ### `generate-plan`
 
-Generate or revise `docs/NNN-plan.md` from the current spec when the spec is already sufficiently clarified. Break work into small, reviewable phases. Order phases to reduce uncertainty early. Use the checklist structure from this skill.
+Generate or revise the related plan artifact from the current spec when the spec is already sufficiently clarified and approved by the developer as the working spec. Break work into small, reviewable phases. Order phases to reduce uncertainty early. Use the checklist structure from this skill.
 
 Ground the phase breakdown in the current codebase structure so the plan reflects real modules, integration points, tests, and constraints rather than a generic implementation outline.
 
 When the work is tiny or low-risk, a compact plan is acceptable if it still preserves clear scope boundaries and a human approval pause before implementation.
+
+If the user requests plan revisions after reviewing a generated plan, treat that as another `generate-plan` invocation scoped to revising the existing plan rather than moving on to implementation.
 
 Consult `references/stage-templates.md` and `references/review-principles.md`.
 
@@ -238,10 +262,10 @@ Consult `references/stage-templates.md` and `references/review-principles.md`.
    - implement the smallest change to pass
    - refactor while keeping tests green
 7. Verify the code compiles or builds successfully.
-8. Run targeted tests as needed while iterating.
-9. Finish by running the full project test suite before declaring the phase ready for review.
-10. Update the plan checklist states accurately.
-11. Write or update implementation evidence in the plan, including the full-suite result.
+8. Run relevant tests during iteration as needed, then run the full project test suite before the phase can be considered done.
+9. Update the plan checklist states accurately as work progresses.
+10. When work is blocked, mark the relevant items as `[!]` and record the reason in the plan so the developer can review the actual blocker.
+11. Write or update implementation evidence in the plan.
 12. If the user asked for full workflow artifacts, create or update draft phase review and retro artifacts, but keep them clearly unapproved until `review-phase` is run.
 
 Never mark a task complete unless the implementation and validation support it.
@@ -250,7 +274,7 @@ Consult `references/stage-templates.md` for review and retro formats.
 
 ### `review-phase`
 
-Review the completed phase against its acceptance criteria and against the design principles in `references/review-principles.md`.
+Use this optional stage to assist the developer's phase review. Review the completed phase against its acceptance criteria and against the design principles in `references/review-principles.md`.
 
 Classify findings into:
 
@@ -264,7 +288,7 @@ If the user approves the phase after this review, update the retro artifact to r
 
 ### `final-review`
 
-Review the full implementation against the spec, plan, architecture quality, maintainability, and the design principles in `references/review-principles.md`.
+Use this optional stage to assist the developer's final review. Review the full implementation against the spec, plan, architecture quality, maintainability, and the design principles in `references/review-principles.md`.
 
 Focus especially on:
 
@@ -276,6 +300,8 @@ Focus especially on:
 - coupling and cohesion
 - testability
 - hidden technical debt
+
+If the user wants changes after the final review, treat that as a new bounded improvement cycle grounded in the same approved spec and plan unless they explicitly ask to revise those artifacts too.
 
 ## Filesystem behavior
 
