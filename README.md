@@ -35,13 +35,13 @@ If you want the shortest usable version of this workflow, do this:
 
 1. The developer writes a short spec in `docs/NNN-spec.md` or `docs/NNN-<label>-spec.md`.
 2. The AI reviews the spec for ambiguity, missing constraints, and risky assumptions.
-3. The AI captures unresolved questions in `docs/NNN-questions.md` or `docs/NNN-<label>-questions.md`, and the developer answers them.
+3. If clarification is needed, the AI captures unresolved questions in `docs/NNN-questions.md` or `docs/NNN-<label>-questions.md`, and the developer answers them.
 4. The AI folds those answers back into the spec and either deletes the questions file if clarification is complete or refreshes it with only the remaining unresolved items.
 5. Steps 3 and 4 repeat until the spec is clear enough to plan.
-6. The developer reviews and approves the working spec.
+6. When the spec is ready, the developer reviews and approves the working spec.
 7. The AI generates a phased plan, and the developer reviews it, either requesting revisions or approving it.
 8. Once the spec and plan are approved, the developer should strongly consider creating a checkpoint commit before implementation begins.
-9. The AI implements one phase only, runs the full test suite, and updates the relevant artifacts before the developer reviews the result.
+9. The AI implements one phase only, runs the full test suite, and updates the plan and related artifacts before the developer reviews the result.
 10. When a phase is approved, the developer should strongly consider creating another checkpoint commit before beginning the next phase.
 11. After the last phase, the developer performs a final implementation review and can either request improvements or approve completion.
 
@@ -204,34 +204,36 @@ Not every task needs the full version of the process.
 ```mermaid
 flowchart TD
     A[Developer drafts initial spec] --> B[AI reviews spec for ambiguity, gaps, risks, and contradictions]
-    B --> C[AI generates NNN-questions.md for unresolved questions and assumptions]
-    C --> D[Developer answers NNN-questions.md]
-    D --> E[AI folds answers back into spec]
-    E --> F{Questions fully resolved?}
-    F -- No --> C
-    F -- Yes --> G[Developer reviews and approves working spec]
-    G --> H[AI generates phased plan with goals, checklist tasks, acceptance criteria, and risks]
-    H --> I{Developer approves plan?}
-    I -- No, revise plan --> H
-    I -- Yes --> J[Developer may create checkpoint commit for approved spec and plan]
-    J --> K[AI restates next-phase assumptions, done criteria, and boundaries]
-    K --> L[AI implements next phase with red/green TDD where feasible]
-    L --> M[AI compiles, runs the full test suite, and verifies acceptance criteria]
-    M --> N{Validation passes?}
-    N -- No --> L
-    N -- Yes --> O[Developer reviews phase for correctness, scope, and design principles]
-    O --> P{Phase approved?}
-    P -- No --> L
-    P -- Yes --> Q[AI updates plan checklist, review notes, and retrospective]
-    Q --> R[Developer may create checkpoint commit for approved phase]
-    R --> S{More phases remain?}
-    S -- Yes --> K
-    S -- No --> T[Developer performs final implementation review]
-    T --> U{Final output approved?}
-    U -- No, request improvements --> V[AI makes bounded improvement pass]
-    V --> T
-    U -- Yes --> W[Developer starts next spec or improvement cycle]
-    W --> A
+    B --> C{Clarification needed?}
+    C -- Yes --> D[AI generates NNN-questions.md or NNN-label-questions.md]
+    D --> E[Developer answers questions artifact]
+    E --> F[AI folds answers back into spec]
+    F --> G{Questions fully resolved?}
+    G -- No --> D
+    G -- Yes --> H[Developer reviews and approves working spec]
+    C -- No --> H
+    H --> I[AI generates phased plan with goals, checklist tasks, acceptance criteria, and risks]
+    I --> J{Developer approves plan?}
+    J -- No, revise plan --> I
+    J -- Yes --> K[Developer may create checkpoint commit for approved spec and plan]
+    K --> L[AI restates next-phase assumptions, done criteria, and boundaries]
+    L --> M[AI implements next phase with red/green TDD where feasible]
+    M --> N[AI compiles, runs the full test suite, and verifies acceptance criteria]
+    N --> O{Validation passes?}
+    O -- No --> M
+    O -- Yes --> P[Developer reviews phase for correctness, scope, and design principles]
+    P --> Q{Phase approved?}
+    Q -- No --> M
+    Q -- Yes --> R[AI updates plan checklist, review notes, and retrospective]
+    R --> S[Developer may create checkpoint commit for approved phase]
+    S --> T{More phases remain?}
+    T -- Yes --> L
+    T -- No --> U[Developer performs final implementation review]
+    U --> V{Final output approved?}
+    V -- No, request improvements --> W[AI makes bounded improvement pass, reruns relevant tests, and updates review artifacts]
+    W --> U
+    V -- Yes --> X[Developer starts next spec or improvement cycle]
+    X --> A
 ```
 
 ---
@@ -269,7 +271,7 @@ The AI should not jump directly from vague requirements to code. Instead, it sho
 
 This shifts the conversation from “write code” to “clarify intent.”
 
-### 3. Capture Open Questions in `NNN-questions.md`
+### 3. Capture Open Questions in `NNN-questions.md` or `NNN-<label>-questions.md`
 
 Inline clarification in chat often becomes noisy and hard to reuse. A better pattern is for the AI to create a transient markdown artifact such as `docs/NNN-questions.md` or `docs/NNN-<label>-questions.md`.
 
@@ -433,7 +435,7 @@ After the last planned phase is complete, the developer performs a final impleme
 
 That final review does not have to be a one-way approval step. The developer may identify cross-phase issues, documentation gaps, cleanup opportunities, or broader design improvements that should be addressed before calling the work complete.
 
-If that happens, the AI can make another bounded improvement pass and return the work for review again. The cycle repeats until the developer approves the final output.
+If that happens, the AI can make another bounded improvement pass, rerun the relevant tests, update any affected plan or review artifacts, and return the work for review again. The cycle repeats until the developer approves the final output.
 
 The same principle applies here as in earlier gates: approval should be explicit, and improvement loops should be deliberate rather than accidental.
 
@@ -641,12 +643,7 @@ In practice, the skill is triggered when your prompt clearly matches that workfl
 
 The skill is intentionally human-gated. After a gated stage, the AI should pause, tell you what to review, and tell you what to run next if you approve. Running the next stage is treated as implicit approval to continue unless you say otherwise.
 
-The clarification loop is intentionally single-path. After the AI generates `NNN-questions.md`, the next step is to answer that file and run `fold-questions`. The AI should then either:
-
-- update the spec and delete `NNN-questions.md` if the answers are now sufficient
-- or update the spec as far as possible and produce a refreshed `NNN-questions.md` containing only the remaining unresolved questions
-
-That loop repeats until the AI produces an updated spec that is ready for developer approval. After that approval, the next stage is `generate-plan`.
+`review-spec` is the usual front door. In the common path, it does not just critique the spec. It either generates a transient questions artifact immediately when structured clarification is needed, or it moves straight to plan generation when the spec is already clear enough. The discrete `generate-questions` and `generate-plan` stages still exist when you want tighter manual control, but most users can start with `review-spec` and follow the prompt it gives them next.
 
 ### Installation
 
@@ -655,7 +652,6 @@ You can install this workflow in major agentic coding tools that support reusabl
 - **Codex**
   Follow the official Codex docs for skills and repo instructions:
   - <https://developers.openai.com/codex/skills>
-  - <https://developers.openai.com/codex/explore/>
  
   This repo also includes [`deploy_codex.sh`](./deploy_codex.sh), which copies the skill to `~/.codex/skills/human-gated-spec-driven-ai-development` on bash-compatible systems.
 
@@ -663,116 +659,120 @@ You can install this workflow in major agentic coding tools that support reusabl
   Follow Anthropic's official skills documentation:
   - <https://support.claude.com/en/articles/12512180-use-skills-in-claude>
 
-  In Claude's skills UI, upload the skill folder as a ZIP file after packaging `skills/human-gated-spec-driven-ai-development/`.
+  Keep the Claude Code setup high level: package `skills/human-gated-spec-driven-ai-development/` as a ZIP and add it through Claude's skills UI.
 
 ### Prompt Cookbook
 
-These examples assume you are working on `docs/006-spec.md` and related artifacts.
+These examples assume you are working on `docs/006-auth-spec.md` and related artifacts. The same prompts work with unlabeled names such as `docs/006-spec.md`.
 
 #### Start with a spec review
 
 Most explicit:
 
 ```text
-Use the human-gated-spec-driven-ai-development skill to review-spec for docs/006-spec.md
+Use the human-gated-spec-driven-ai-development skill to review-spec for docs/006-auth-spec.md
 ```
 
 Natural phrasing:
 
 ```text
-Review spec 006-spec.md using the human-gated spec-driven workflow
+Review spec 006-auth-spec.md using the human-gated spec-driven workflow
 ```
 
 Short form:
 
 ```text
-Review-spec for 006-spec.md
+Review-spec for 006-auth-spec.md
 ```
 
 Expected result:
 
 - the AI reviews the spec for ambiguity, contradictions, missing constraints, and likely implementation traps
 - the AI points out where the spec already aligns with the repo and where it conflicts or leaves risk unresolved
-- the result helps you decide whether the spec is already ready for planning, whether it should go into `generate-questions`, or whether you want to revise the spec first
+- if structured clarification is needed, the AI creates `docs/006-auth-questions.md` and tells you to answer it and then run `fold-questions`
+- if no structured clarification is needed, the AI can move directly to `docs/006-auth-plan.md` and tell you to review the plan, approve it, and then run `implement-next-phase`
 
-This stage does not start the question file by itself. It is a fast review and triage step before you decide whether to plan or enter the clarification loop.
+This is the default entry point for the skill.
 
 #### Generate clarification questions
 
 Most explicit:
 
 ```text
-Use the human-gated-spec-driven-ai-development skill to generate-questions for 006-spec.md
+Use the human-gated-spec-driven-ai-development skill to generate-questions for 006-auth-spec.md
 ```
 
 Natural phrasing:
 
 ```text
-Generate questions for 006-spec.md using the spec-driven workflow
+Generate questions for 006-auth-spec.md using the spec-driven workflow
 ```
 
 Short form:
 
 ```text
-Generate questions for 006-spec.md
+Generate questions for 006-auth-spec.md
 ```
 
 Expected result:
 
-- the AI creates `docs/006-questions.md`
+- the AI creates `docs/006-auth-questions.md`
 - you answer that file directly
 - you then ask the AI to fold the answers back into the spec
-- the AI either deletes `docs/006-questions.md` if clarification is complete or gives you a refreshed `docs/006-questions.md` with only the still-open items
+- the AI either deletes `docs/006-auth-questions.md` if clarification is complete or gives you a refreshed `docs/006-auth-questions.md` with only the still-open items
+
+Use this stage when you want to skip the combined `review-spec` entry point and force the clarification loop directly.
 
 #### Fold answered questions back into the spec and continue the clarification loop
 
 ```text
-Use the human-gated-spec-driven-ai-development skill to fold-questions from 006-questions.md into 006-spec.md
+Use the human-gated-spec-driven-ai-development skill to fold-questions from 006-auth-questions.md into 006-auth-spec.md
 ```
 
 Natural phrasing:
 
 ```text
-Fold questions from 006-questions.md back into the spec
+Fold questions from 006-auth-questions.md back into the spec
 ```
 
 Expected result:
 
-- the AI updates `docs/006-spec.md`
-- if the answers are sufficient, it deletes `docs/006-questions.md` by default
-- if the answers are still not sufficient, it refreshes `docs/006-questions.md` with a smaller, cleaner set of unresolved questions
+- the AI updates `docs/006-auth-spec.md`
+- if the answers are sufficient, it deletes `docs/006-auth-questions.md` by default
+- if the answers are still not sufficient, it refreshes `docs/006-auth-questions.md` with a smaller, cleaner set of unresolved questions
 - once the updated spec is ready, you review and approve it before moving on to planning
 - if approved, you continue by asking for `generate-plan`
 
 #### Generate a phased plan after the working spec is approved
 
 ```text
-Use the human-gated-spec-driven-ai-development skill to generate-plan for 006-spec.md
+Use the human-gated-spec-driven-ai-development skill to generate-plan for 006-auth-spec.md
 ```
 
 Natural phrasing:
 
 ```text
-Generate plan for 006-spec.md
+Generate plan for 006-auth-spec.md
 ```
 
 Expected result:
 
-- the AI creates or updates `docs/006-plan.md`
+- the AI creates or updates `docs/006-auth-plan.md`
 - the plan is broken into reviewable phases with tasks, acceptance criteria, risks, and out-of-scope notes
 - you review the phase order, acceptance criteria, risks, and out-of-scope notes
 - if approved, you continue by asking for `implement-next-phase`
+- once the spec and plan are both approved, this is a strong point for an optional checkpoint commit before implementation begins
 
 #### Implement one phase only
 
 ```text
-Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 006-plan.md
+Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 006-auth-plan.md
 ```
 
 Natural phrasing:
 
 ```text
-Implement the next phase for 006-plan.md
+Implement the next phase for 006-auth-plan.md
 ```
 
 Expected result:
@@ -786,18 +786,18 @@ Expected result:
 #### Optionally record a formal phase review
 
 ```text
-Use the human-gated-spec-driven-ai-development skill to review-phase for 006-plan.md
+Use the human-gated-spec-driven-ai-development skill to review-phase for 006-auth-plan.md
 ```
 
 Natural phrasing:
 
 ```text
-Review the completed phase for 006-plan.md
+Review the completed phase for 006-auth-plan.md
 ```
 
 Expected result:
 
-- the AI creates or updates `docs/006-phase-01-review.md`
+- the AI creates or updates `docs/006-auth-phase-01-review.md`
 - findings are classified as must-fix, should-fix, or optional improvements
 - if you approve and continue, the next invocation acts as implicit approval to move forward
 
@@ -806,19 +806,20 @@ This stage is optional. It is an AI assistant for the developer's phase review, 
 #### Optionally run the final review
 
 ```text
-Use the human-gated-spec-driven-ai-development skill to final-review for 006-spec.md and 006-plan.md
+Use the human-gated-spec-driven-ai-development skill to final-review for 006-auth-spec.md and 006-auth-plan.md
 ```
 
 Natural phrasing:
 
 ```text
-Run the final review for 006-spec.md and 006-plan.md
+Run the final review for 006-auth-spec.md and 006-auth-plan.md
 ```
 
 Expected result:
 
 - the AI reviews the full implementation against the spec and plan
 - it records final findings and go/no-go guidance
+- if you request a bounded improvement pass, the AI should normally rerun the relevant tests and update affected plan or review artifacts before handing it back
 - you decide whether the work is complete or another cycle is needed
 
 This stage is optional. It is an AI assistant for the developer's final review, not a replacement for it.
@@ -827,19 +828,30 @@ This stage is optional. It is an AI assistant for the developer's final review, 
 
 One complete session might look like this:
 
-1. Developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to review-spec for docs/006-spec.md`
-2. Developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to generate-questions for 006-spec.md`
-3. Developer answers `docs/006-questions.md`
-4. Developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to fold-questions from 006-questions.md into 006-spec.md`
-5. If the AI refreshed `docs/006-questions.md`, the developer answers it and then asks the AI to run `fold-questions` again
-6. Once the AI resolves the questions, the developer reviews and approves `docs/006-spec.md`
-7. Developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to generate-plan for 006-spec.md`
-8. Developer reviews and approves `docs/006-plan.md`
-9. Developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 006-plan.md`
+1. Developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to review-spec for docs/006-auth-spec.md`
+2. If the AI created `docs/006-auth-questions.md`, the developer answers that file
+3. Developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to fold-questions from 006-auth-questions.md into 006-auth-spec.md`
+4. If the AI refreshed `docs/006-auth-questions.md`, the developer answers it and then asks the AI to run `fold-questions` again
+5. Once the AI resolves the questions, the developer reviews and approves `docs/006-auth-spec.md`
+6. If `review-spec` did not already generate the plan, the developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to generate-plan for 006-auth-spec.md`
+7. Developer reviews and approves `docs/006-auth-plan.md`
+8. Developer may create a checkpoint commit for the approved spec and plan
+9. Developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 006-auth-plan.md`
 10. Developer reviews the code, tests, and plan updates
-11. Optionally, developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to review-phase for 006-plan.md`
-12. Developer repeats `implement-next-phase` and optional `review-phase` until complete
-13. Optionally, developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to final-review for 006-spec.md and 006-plan.md`
+11. Optionally, developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to review-phase for 006-auth-plan.md`
+12. If the phase is approved, the developer may create a checkpoint commit before the next phase
+13. Developer repeats `implement-next-phase` and optional `review-phase` until complete
+14. Optionally, developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to final-review for 006-auth-spec.md and 006-auth-plan.md`
+
+### Fast Path Example
+
+If the spec is already clear enough, the shorter path can look like this:
+
+1. Developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to review-spec for docs/008-api-spec.md`
+2. The AI determines the spec is already clear enough, generates `docs/008-api-plan.md`, and tells the developer to review it
+3. Developer reviews and approves `docs/008-api-plan.md`
+4. Developer may create a checkpoint commit for the approved spec and plan
+5. Developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 008-api-plan.md`
 
 ### Example Lightweight Workflow
 

@@ -27,7 +27,7 @@ This workflow is human-gated through explicit pauses between stages.
 
 The standard gates are:
 
-- after `review-spec`, the user reviews the spec feedback and either revises the spec or asks for `generate-questions` or `generate-plan`
+- after `review-spec`, the user reviews either the generated questions artifact or the generated plan, or revises the spec if requested
 - after `generate-questions`, the user answers `NNN-questions.md` and then asks for `fold-questions`
 - after `fold-questions`, the user either reviews and approves the updated working spec or answers the refreshed `NNN-questions.md` if more clarification is still needed
 - after `generate-plan`, the user reviews the plan and either asks for plan revisions or asks for `implement-next-phase` if approved
@@ -199,11 +199,15 @@ Use repo reconnaissance to call out where the spec already aligns with existing 
 
 Create or update the spec review in-place or in a review artifact if the user requests it. Prefer concise, actionable feedback.
 
-This stage is a triage step. It should help the developer decide which path comes next:
+This stage is the normal front door for the workflow. After the review, choose the next action yourself instead of making the developer choose between intermediate stages:
 
-- if the spec is already clear enough, the developer can approve it and move on to `generate-plan`
-- if the spec needs structured clarification, the developer should move on to `generate-questions`
-- if the spec needs direct revision first, the developer can revise it before continuing
+- if the spec needs structured clarification, immediately create or update `docs/NNN-questions.md` or `docs/NNN-<label>-questions.md` and tell the developer to answer it and then run `fold-questions`
+- if the spec is already clear enough to plan, immediately create or update the related plan artifact and tell the developer to review and approve it before running `implement-next-phase`
+- if the spec needs direct revision before either of those paths makes sense, explain the blocking issue and tell the developer what to revise
+
+When this stage creates questions, the next prompt should point to `fold-questions` after the developer answers them.
+
+When this stage creates a plan, remind the developer that approval of the working spec and plan is a strong point for an optional checkpoint commit before implementation begins.
 
 Consult `references/stage-templates.md` for the review structure.
 
@@ -218,6 +222,8 @@ Group questions by topic. Distinguish must-answer questions from useful clarific
 Before each topic, briefly note the files checked when that context materially reduced or eliminated uncertainty.
 
 Do not tell the user to choose between answering the questions and skipping straight to planning. The expected next step after this stage is that the user answers `NNN-questions.md` and then runs `fold-questions`.
+
+This stage remains available when the user explicitly wants the clarification loop as a separate step instead of using the combined `review-spec` entry point.
 
 Consult `references/stage-templates.md` for the template.
 
@@ -247,6 +253,8 @@ Ground the phase breakdown in the current codebase structure so the plan reflect
 When the work is tiny or low-risk, a compact plan is acceptable if it still preserves clear scope boundaries and a human approval pause before implementation.
 
 If the user requests plan revisions after reviewing a generated plan, treat that as another `generate-plan` invocation scoped to revising the existing plan rather than moving on to implementation.
+
+This stage remains available when the user explicitly wants plan generation as a separate step instead of using the combined `review-spec` entry point.
 
 Consult `references/stage-templates.md` and `references/review-principles.md`.
 
@@ -302,6 +310,8 @@ Focus especially on:
 - hidden technical debt
 
 If the user wants changes after the final review, treat that as a new bounded improvement cycle grounded in the same approved spec and plan unless they explicitly ask to revise those artifacts too.
+
+In that bounded improvement cycle, normally rerun the relevant tests and update affected plan, review, or retro artifacts before returning the work to the developer.
 
 ## Filesystem behavior
 
