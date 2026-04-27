@@ -1,4 +1,4 @@
 interface:
   display_name: Human-Gated Spec-Driven AI Development
-  short_description: Run one stage at a time for spec, plan, implementation, and review workflows using numbered docs artifacts.
+  short_description: Run one stage at a time for spec, plan, implementation, and review workflows using numbered artifacts in specs/.
   category: productivity

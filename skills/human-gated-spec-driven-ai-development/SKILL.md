@@ -1,6 +1,6 @@
 ---
 name: human-gated-spec-driven-ai-development
-description: manage a local-filesystem workflow for human-gated spec-driven ai development using numbered markdown artifacts in docs/ such as 001-spec.md, 001-auth-spec.md, 001-questions.md, and 001-plan.md. use when the user wants to review a spec, generate numbered questions artifacts, iteratively fold answered questions back into the spec until the spec is sufficient to generate a phased plan, generate or update that plan with checklist items, implement the next phase in red/green tdd style while updating plan status, review a completed phase, or run a final implementation review. supports bare filenames and markdown file links as artifact references.
+description: manage a local-filesystem workflow for human-gated spec-driven ai development using numbered markdown artifacts in specs/ such as 001-spec.md, 001-auth-spec.md, 001-questions.md, and 001-plan.md. use when the user wants to review a spec, generate numbered questions artifacts, iteratively fold answered questions back into the spec until the spec is sufficient to generate a phased plan, generate or update that plan with checklist items, implement the next phase in red/green tdd style while updating plan status, review a completed phase, or run a final implementation review. supports bare filenames and markdown file links as artifact references.
 ---
 
 Use this skill to run one stage at a time against a project on the local filesystem.
@@ -12,7 +12,7 @@ Use this skill to run one stage at a time against a project on the local filesys
 3. Read the current spec and plan state before making changes.
 4. Perform a quick reconnaissance of the relevant codebase and project documentation before asking the user questions or proposing a plan.
 5. Perform only the requested stage.
-6. Update durable markdown artifacts in `docs/`.
+6. Update durable markdown artifacts in `specs/`.
 7. Leave the project in a handoff-ready state.
 
 ## Human gates
@@ -48,16 +48,16 @@ The developer remains responsible for review, approval, and delivery actions out
 
 Assume the canonical artifact set below unless the repo clearly uses a compatible variant:
 
-- `docs/001-spec.md`
-- `docs/001-auth-spec.md`
-- `docs/001-plan.md`
-- `docs/001-auth-plan.md`
-- `docs/001-questions.md` for transient clarification work
-- `docs/001-auth-questions.md` for transient clarification work
-- `docs/001-phase-01-review.md`
-- `docs/001-auth-phase-01-review.md`
-- `docs/001-phase-01-retro.md`
-- `docs/001-auth-phase-01-retro.md`
+- `specs/001-spec.md`
+- `specs/001-auth-spec.md`
+- `specs/001-plan.md`
+- `specs/001-auth-plan.md`
+- `specs/001-questions.md` for transient clarification work
+- `specs/001-auth-questions.md` for transient clarification work
+- `specs/001-phase-01-review.md`
+- `specs/001-auth-phase-01-review.md`
+- `specs/001-phase-01-retro.md`
+- `specs/001-auth-phase-01-retro.md`
 
 Use three-digit spec ids such as `001`, `002`, `003`.
 An optional label may appear between the numeric prefix and artifact type, for example `001-auth-spec.md`.
@@ -67,20 +67,20 @@ Accept either of these artifact reference styles:
 
 - bare filenames such as `001-plan.md`
 - bare filenames such as `001-auth-plan.md`
-- markdown links such as `[plan](docs/001-plan.md)` or `[](001-plan.md)`
+- markdown links such as `[plan](specs/001-plan.md)` or `[](001-plan.md)`
 
-When a bare filename is provided, look for it in `docs/` first.
+When a bare filename is provided, look for it in `specs/` first.
 
 For naming, prefer:
 
-- `docs/001-spec.md`
-- `docs/001-auth-spec.md`
-- `docs/001-plan.md`
-- `docs/001-auth-plan.md`
-- `docs/001-phase-01-review.md`
-- `docs/001-auth-phase-01-review.md`
-- `docs/001-phase-01-retro.md`
-- `docs/001-auth-phase-01-retro.md`
+- `specs/001-spec.md`
+- `specs/001-auth-spec.md`
+- `specs/001-plan.md`
+- `specs/001-auth-plan.md`
+- `specs/001-phase-01-review.md`
+- `specs/001-auth-phase-01-review.md`
+- `specs/001-phase-01-retro.md`
+- `specs/001-auth-phase-01-retro.md`
 
 The label is optional and exists only to help developers recognize the workstream at a glance. The three-digit numeric prefix remains the primary grouping key, and if a label is used it should stay consistent across the related artifact set.
 
@@ -126,6 +126,7 @@ If the user explicitly says `lightweight mode` or clearly asks for a lighter ver
 - After implementation, verify the project compiles and the full project test suite passes before marking a phase complete.
 - If compilation or tests fail, record the blocked state honestly in the plan and review artifacts.
 - Keep questions artifacts such as `NNN-questions.md` or `NNN-<label>-questions.md` transient. After `fold-questions`, delete them by default when all questions are fully resolved and absorbed into the spec. Only leave them behind if there is a specific reason to preserve them, and then mark them clearly transient and obsolete.
+- In questions artifacts, treat blockquoted labels such as `> Decision:` and `> Question:` as developer feedback. Fold `Decision` content into the spec when it resolves an issue, and preserve or refine `Question` content as unresolved clarification.
 - Treat `fold-questions` as the clarification-loop stage: after answers are added, update the spec as far as possible and then either delete the resolved questions file or produce a cleaner next set of unresolved questions.
 - Keep handoff notes in the plan, review, and retro artifacts rather than creating a separate handoff file.
 
@@ -201,7 +202,7 @@ Create or update the spec review in-place or in a review artifact if the user re
 
 This stage is the normal front door for the workflow. After the review, choose the next action yourself instead of making the developer choose between intermediate stages:
 
-- if the spec needs structured clarification, immediately create or update `docs/NNN-questions.md` or `docs/NNN-<label>-questions.md` and tell the developer to answer it and then run `fold-questions`
+- if the spec needs structured clarification, immediately create or update `specs/NNN-questions.md` or `specs/NNN-<label>-questions.md` and tell the developer to answer it and then run `fold-questions`
 - if the spec is already clear enough to plan, immediately create or update the related plan artifact and tell the developer to review and approve it before running `implement-next-phase`
 - if the spec needs direct revision before either of those paths makes sense, explain the blocking issue and tell the developer what to revise
 
@@ -213,7 +214,7 @@ Consult `references/stage-templates.md` for the review structure.
 
 ### `generate-questions`
 
-Create `docs/NNN-questions.md` or `docs/NNN-<label>-questions.md` as a transient artifact using the same three-digit prefix as the related spec and plan.
+Create `specs/NNN-questions.md` or `specs/NNN-<label>-questions.md` as a transient artifact using the same three-digit prefix as the related spec and plan.
 
 Only include questions that remain unresolved after checking the relevant codebase and docs.
 
@@ -229,7 +230,7 @@ Consult `references/stage-templates.md` for the template.
 
 ### `fold-questions`
 
-Read the answered `docs/NNN-questions.md` or `docs/NNN-<label>-questions.md` and fold the answers into the spec. Remove ambiguity where possible. Preserve intent.
+Read the answered `specs/NNN-questions.md` or `specs/NNN-<label>-questions.md` and fold the answers into the spec. Remove ambiguity where possible. Preserve intent.
 
 Then decide whether clarification is complete:
 
@@ -317,7 +318,7 @@ In that bounded improvement cycle, normally rerun the relevant tests and update 
 
 This skill is for local filesystem environments such as Codex or Claude Code.
 
-Prefer editing existing repo files directly when the requested stage calls for it. Keep markdown artifacts in `docs/`. When creating a new spec cycle, choose the next available three-digit prefix.
+Prefer editing existing repo files directly when the requested stage calls for it. Keep markdown artifacts in `specs/`. When creating a new spec cycle, choose the next available three-digit prefix.
 
 ## Output behavior
 

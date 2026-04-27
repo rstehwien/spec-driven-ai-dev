@@ -33,7 +33,7 @@ Use this structure when the user asks for a spec review:
 
 ## questions artifact
 
-Create `docs/NNN-questions.md` with this structure:
+Create `specs/NNN-questions.md` with this structure:
 
 ```md
 # Questions for Spec 001
@@ -52,12 +52,21 @@ Create `docs/NNN-questions.md` with this structure:
 1. Question
 2. Question
 
+## How to Answer
+Use blockquoted labels for comments and feedback:
+
+> Decision:
+> The decision made was...
+
+> Question:
+> I have a question...
+
 ## Fallback Assumptions if Unanswered
 - assumption 1
 - assumption 2
 
 ## User gate
-- answer this file directly
+- answer this file directly, preferably using `> Decision:` for settled answers and `> Question:` for follow-up uncertainty
 - when you are ready, run `fold-questions` rather than skipping to planning
 - example prompt: `Use the human-gated-spec-driven-ai-development skill to fold-questions from 001-questions.md into 001-spec.md`
 ```
@@ -101,7 +110,7 @@ Goal: [one sentence]
 
 ## phase review artifact
 
-Use `docs/001-phase-01-review.md`:
+Use `specs/001-phase-01-review.md`:
 
 ```md
 # Phase 01 Review
@@ -136,7 +145,7 @@ Use `docs/001-phase-01-review.md`:
 
 ## phase retro artifact
 
-Use `docs/001-phase-01-retro.md`:
+Use `specs/001-phase-01-retro.md`:
 
 ```md
 # Phase 01 Retrospective
@@ -195,5 +204,5 @@ Use this structure:
 ## User gate
 - review final implementation, tests, and open risks
 - if approved, treat the work as complete; otherwise start another spec or implementation cycle
-- example prompt: `Use the human-gated-spec-driven-ai-development skill to review-spec for docs/002-spec.md`
+- example prompt: `Use the human-gated-spec-driven-ai-development skill to review-spec for specs/002-spec.md`
 ```
