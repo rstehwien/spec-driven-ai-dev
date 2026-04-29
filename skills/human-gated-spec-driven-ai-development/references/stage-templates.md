@@ -33,7 +33,7 @@ Use this structure when the user asks for a spec review:
 
 ## questions artifact
 
-Create `specs/NNN-questions.md` with this structure:
+Create `specs/NNN-questions-01.md` or the next numbered `specs/NNN-questions-YY.md` file with this structure:
 
 ```md
 # Questions for Spec 001
@@ -68,7 +68,7 @@ Use blockquoted labels for comments and feedback:
 ## User gate
 - answer this file directly, preferably using `> Decision:` for settled answers and `> Question:` for follow-up uncertainty
 - when you are ready, run `fold-questions` rather than skipping to planning
-- example prompt: `Use the human-gated-spec-driven-ai-development skill to fold-questions from 001-questions.md into 001-spec.md`
+- example prompt: `Use the human-gated-spec-driven-ai-development skill to fold-questions from 001-questions-01.md into 001-spec.md`
 ```
 
 ## plan format

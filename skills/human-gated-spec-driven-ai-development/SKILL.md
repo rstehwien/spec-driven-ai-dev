@@ -1,6 +1,6 @@
 ---
 name: human-gated-spec-driven-ai-development
-description: manage a local-filesystem workflow for human-gated spec-driven ai development using numbered markdown artifacts in specs/ such as 001-spec.md, 001-auth-spec.md, 001-questions.md, and 001-plan.md. use when the user wants to review a spec, generate numbered questions artifacts, iteratively fold answered questions back into the spec until the spec is sufficient to generate a phased plan, generate or update that plan with checklist items, implement the next phase in red/green tdd style while updating plan status, review a completed phase, or run a final implementation review. supports bare filenames and markdown file links as artifact references.
+description: manage a local-filesystem workflow for human-gated spec-driven ai development using numbered markdown artifacts in specs/ such as 001-spec.md, 001-auth-spec.md, 001-questions-01.md, and 001-plan.md. use when the user wants to review a spec, generate numbered questions artifacts, iteratively fold answered questions back into the spec until the spec is sufficient to generate a phased plan, generate or update that plan with checklist items, implement the next phase in red/green tdd style while updating plan status, review a completed phase, or run a final implementation review. supports bare filenames and markdown file links as artifact references.
 ---
 
 Use this skill to run one stage at a time against a project on the local filesystem.
@@ -28,8 +28,8 @@ This workflow is human-gated through explicit pauses between stages.
 The standard gates are:
 
 - after `review-spec`, the user reviews either the generated questions artifact or the generated plan, or revises the spec if requested
-- after `generate-questions`, the user answers `NNN-questions.md` and then asks for `fold-questions`
-- after `fold-questions`, the user either reviews and approves the updated working spec or answers the refreshed `NNN-questions.md` if more clarification is still needed
+- after `generate-questions`, the user answers the generated `NNN-questions-YY.md` file and then asks for `fold-questions`
+- after `fold-questions`, the user either reviews and approves the updated working spec or answers the next generated `NNN-questions-YY.md` file if more clarification is still needed
 - after `generate-plan`, the user reviews the plan and either asks for plan revisions or asks for `implement-next-phase` if approved
 - after `implement-next-phase`, the user reviews the implementation evidence and optionally asks for `review-phase` if they want AI-assisted formal phase review recorded
 - after `review-phase`, the user decides whether to revise the phase or continue by asking for `implement-next-phase`
@@ -52,8 +52,8 @@ Assume the canonical artifact set below unless the repo clearly uses a compatibl
 - `specs/001-auth-spec.md`
 - `specs/001-plan.md`
 - `specs/001-auth-plan.md`
-- `specs/001-questions.md` for transient clarification work
-- `specs/001-auth-questions.md` for transient clarification work
+- `specs/001-questions-01.md` for the first clarification pass
+- `specs/001-auth-questions-01.md` for the first clarification pass
 - `specs/001-phase-01-review.md`
 - `specs/001-auth-phase-01-review.md`
 - `specs/001-phase-01-retro.md`
@@ -62,6 +62,7 @@ Assume the canonical artifact set below unless the repo clearly uses a compatibl
 Use three-digit spec ids such as `001`, `002`, `003`.
 An optional label may appear between the numeric prefix and artifact type, for example `001-auth-spec.md`.
 Use two-digit phase ids such as `01`, `02`, `03` inside artifact names when phase-specific files are created.
+Use two-digit question-set ids such as `01`, `02`, `03` inside questions artifact names when multiple clarification passes occur.
 
 Accept either of these artifact reference styles:
 
@@ -125,9 +126,9 @@ If the user explicitly says `lightweight mode` or clearly asks for a lighter ver
 - During implementation, update code and tests in red/green tdd style whenever feasible.
 - After implementation, verify the project compiles and the full project test suite passes before marking a phase complete.
 - If compilation or tests fail, record the blocked state honestly in the plan and review artifacts.
-- Keep questions artifacts such as `NNN-questions.md` or `NNN-<label>-questions.md` transient. After `fold-questions`, delete them by default when all questions are fully resolved and absorbed into the spec. Only leave them behind if there is a specific reason to preserve them, and then mark them clearly transient and obsolete.
+- Keep questions artifacts such as `NNN-questions-YY.md` or `NNN-<label>-questions-YY.md` as a numbered clarification history. Do not delete prior question sets after folding them into the spec.
 - In questions artifacts, treat blockquoted labels such as `> Decision:` and `> Question:` as developer feedback. Fold `Decision` content into the spec when it resolves an issue, and preserve or refine `Question` content as unresolved clarification.
-- Treat `fold-questions` as the clarification-loop stage: after answers are added, update the spec as far as possible and then either delete the resolved questions file or produce a cleaner next set of unresolved questions.
+- Treat `fold-questions` as the clarification-loop stage: after answers are added, update the spec as far as possible and then either keep the resolved questions file as history or produce the next numbered set of unresolved questions.
 - Keep handoff notes in the plan, review, and retro artifacts rather than creating a separate handoff file.
 
 ## Plan requirements
@@ -202,7 +203,7 @@ Create or update the spec review in-place or in a review artifact if the user re
 
 This stage is the normal front door for the workflow. After the review, choose the next action yourself instead of making the developer choose between intermediate stages:
 
-- if the spec needs structured clarification, immediately create or update `specs/NNN-questions.md` or `specs/NNN-<label>-questions.md` and tell the developer to answer it and then run `fold-questions`
+- if the spec needs structured clarification, immediately create the next numbered `specs/NNN-questions-YY.md` or `specs/NNN-<label>-questions-YY.md` file and tell the developer to answer it and then run `fold-questions`
 - if the spec is already clear enough to plan, immediately create or update the related plan artifact and tell the developer to review and approve it before running `implement-next-phase`
 - if the spec needs direct revision before either of those paths makes sense, explain the blocking issue and tell the developer what to revise
 
@@ -214,7 +215,7 @@ Consult `references/stage-templates.md` for the review structure.
 
 ### `generate-questions`
 
-Create `specs/NNN-questions.md` or `specs/NNN-<label>-questions.md` as a transient artifact using the same three-digit prefix as the related spec and plan.
+Create `specs/NNN-questions-YY.md` or `specs/NNN-<label>-questions-YY.md` using the same three-digit prefix as the related spec and plan. Start with `01` and increment the two-digit suffix for each new clarification pass.
 
 Only include questions that remain unresolved after checking the relevant codebase and docs.
 
@@ -222,7 +223,7 @@ Group questions by topic. Distinguish must-answer questions from useful clarific
 
 Before each topic, briefly note the files checked when that context materially reduced or eliminated uncertainty.
 
-Do not tell the user to choose between answering the questions and skipping straight to planning. The expected next step after this stage is that the user answers `NNN-questions.md` and then runs `fold-questions`.
+Do not tell the user to choose between answering the questions and skipping straight to planning. The expected next step after this stage is that the user answers the generated `NNN-questions-YY.md` file and then runs `fold-questions`.
 
 This stage remains available when the user explicitly wants the clarification loop as a separate step instead of using the combined `review-spec` entry point.
 
@@ -230,20 +231,18 @@ Consult `references/stage-templates.md` for the template.
 
 ### `fold-questions`
 
-Read the answered `specs/NNN-questions.md` or `specs/NNN-<label>-questions.md` and fold the answers into the spec. Remove ambiguity where possible. Preserve intent.
+Read the answered `specs/NNN-questions-YY.md` or `specs/NNN-<label>-questions-YY.md` and fold the answers into the spec. Remove ambiguity where possible. Preserve intent.
 
 Then decide whether clarification is complete:
 
-- if yes, update the related spec artifact and delete the related questions artifact by default
-- if not, update the related spec artifact as far as possible and regenerate the related questions artifact so it contains only the still-unresolved questions
+- if yes, update the related spec artifact and keep the answered questions artifact as the record of that clarification pass
+- if not, update the related spec artifact as far as possible and create the next numbered questions artifact so it contains only the still-unresolved questions
 
 This stage is the single iterative clarification loop. Use it repeatedly until the spec is clear enough for the developer to approve as the working spec.
 
-When this stage resolves all questions, delete the related questions artifact by default.
+When this stage resolves all questions, keep the answered questions artifact as history.
 
-Only keep the questions file after clarification if there is a specific reason to preserve it for audit or handoff purposes, and then mark it clearly transient and obsolete.
-
-When this stage still leaves open questions, keep the related questions artifact current and do not generate a partial or speculative plan that still depends on unresolved product decisions.
+When this stage still leaves open questions, create the next numbered questions artifact and do not generate a partial or speculative plan that still depends on unresolved product decisions.
 
 ### `generate-plan`
 

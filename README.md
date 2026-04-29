@@ -35,8 +35,8 @@ If you want the shortest usable version of this workflow, do this:
 
 1. The developer writes a short spec in `specs/NNN-spec.md` or `specs/NNN-<label>-spec.md`.
 2. The AI reviews the spec for ambiguity, missing constraints, and risky assumptions.
-3. If clarification is needed, the AI captures unresolved questions in `specs/NNN-questions.md` or `specs/NNN-<label>-questions.md`, and the developer answers them.
-4. The AI folds those answers back into the spec and either deletes the questions file if clarification is complete or refreshes it with only the remaining unresolved items.
+3. If clarification is needed, the AI captures unresolved questions in `specs/NNN-questions-YY.md` or `specs/NNN-<label>-questions-YY.md`, and the developer answers them.
+4. The AI folds those answers back into the spec and either leaves that questions set as a resolved historical artifact or creates the next numbered questions set with only the remaining unresolved items.
 5. Steps 3 and 4 repeat until the spec is clear enough to plan.
 6. When the spec is ready, the developer reviews and approves the working spec.
 7. The AI generates a phased plan, and the developer reviews it, either requesting revisions or approving it.
@@ -205,7 +205,7 @@ Not every task needs the full version of the process.
 flowchart TD
     A[Developer drafts initial spec] --> B[AI reviews spec for ambiguity, gaps, risks, and contradictions]
     B --> C{Clarification needed?}
-    C -- Yes --> D[AI generates NNN-questions.md or NNN-label-questions.md]
+    C -- Yes --> D[AI generates NNN-questions-YY.md or NNN-label-questions-YY.md]
     D --> E[Developer answers questions artifact]
     E --> F[AI folds answers back into spec]
     F --> G{Questions fully resolved?}
@@ -271,9 +271,9 @@ The AI should not jump directly from vague requirements to code. Instead, it sho
 
 This shifts the conversation from “write code” to “clarify intent.”
 
-### 3. Capture Open Questions in `NNN-questions.md` or `NNN-<label>-questions.md`
+### 3. Capture Open Questions in `NNN-questions-YY.md` or `NNN-<label>-questions-YY.md`
 
-Inline clarification in chat often becomes noisy and hard to reuse. A better pattern is for the AI to create a transient markdown artifact such as `specs/NNN-questions.md` or `specs/NNN-<label>-questions.md`.
+Inline clarification in chat often becomes noisy and hard to reuse. A better pattern is for the AI to create a numbered markdown artifact such as `specs/NNN-questions-01.md` or `specs/NNN-<label>-questions-01.md`.
 
 That file captures:
 
@@ -283,7 +283,7 @@ That file captures:
 - edge-case prompts
 - missing acceptance criteria
 
-The developer answers the file directly. The AI then folds those answers back into the spec. If all important clarification is complete, the questions file should usually be deleted. If important questions remain, the AI refreshes it so it contains only the still-unresolved questions. That clarification loop repeats until the spec is ready to plan. Only keep a resolved questions file if there is a specific reason to preserve it, and then mark it clearly as transient and obsolete.
+The developer answers the file directly. The AI then folds those answers back into the spec. If all important clarification is complete, that numbered questions file stays behind as a historical record of that clarification pass. If important questions remain, the AI creates the next numbered questions file so it contains only the still-unresolved questions. That clarification loop repeats until the spec is ready to plan.
 
 When answering a questions artifact, blockquoted labels are a useful lightweight convention for comments and feedback:
 
@@ -297,7 +297,7 @@ When answering a questions artifact, blockquoted labels are a useful lightweight
 
 Use `Decision` for settled answers the AI should fold into the spec. Use `Question` for follow-up uncertainty the AI should preserve or turn into a cleaner unresolved question.
 
-Using the same numeric prefix as the related spec and plan reduces the chance of collisions when multiple workstreams are active at the same time. An optional label can make it easier for developers to recognize the workstream at a glance, as long as the same `NNN` and label are used consistently across related artifacts.
+Using the same numeric prefix as the related spec and plan reduces the chance of collisions when multiple workstreams are active at the same time. An optional label can make it easier for developers to recognize the workstream at a glance, as long as the same `NNN` and label are used consistently across related artifacts. Use a two-digit question-set tracker such as `01`, `02`, `03` so each clarification pass has a stable filename and prior comments are preserved.
 
 ### 4. Freeze a Working Spec
 
@@ -473,19 +473,23 @@ specs/
   NNN+1-plan.md
 ```
 
-Transient clarification artifact:
+Clarification artifacts:
 
 ```text
-specs/NNN-questions.md
-specs/NNN-<label>-questions.md
+specs/NNN-questions-01.md
+specs/NNN-questions-02.md
+specs/NNN-<label>-questions-01.md
+specs/NNN-<label>-questions-02.md
 ```
 
 Recommended rules:
 
 - keep numbered artifacts for durable project state
-- keep questions artifacts transient
+- keep numbered questions artifacts as durable clarification history
 - use the same numeric prefix as the related spec and plan
 - if you use a label, keep the same label across the related spec, plan, questions, review, and retro artifacts
+- use a two-digit question-set suffix such as `01`, `02`, `03`
+- increment the question-set suffix each time a new clarification round is created instead of overwriting or deleting the previous one
 - treat the label as optional and human-friendly; the numeric prefix remains the primary grouping key
 - use the same numeric prefix for one spec/plan cycle
 - update the checklist as work progresses
@@ -520,7 +524,7 @@ Allow admin users to export the current report view as CSV.
 - non-admin users do not see the export action
 ```
 
-Example `specs/001-auth-questions.md`:
+Example `specs/001-auth-questions-01.md`:
 
 ```md
 # Open Questions
@@ -655,7 +659,7 @@ In practice, the skill is triggered when your prompt clearly matches that workfl
 
 The skill is intentionally human-gated. After a gated stage, the AI should pause, tell you what to review, and tell you what to run next if you approve. Running the next stage is treated as implicit approval to continue unless you say otherwise.
 
-`review-spec` is the usual front door. In the common path, it does not just critique the spec. It either generates a transient questions artifact immediately when structured clarification is needed, or it moves straight to plan generation when the spec is already clear enough. The discrete `generate-questions` and `generate-plan` stages still exist when you want tighter manual control, but most users can start with `review-spec` and follow the prompt it gives them next.
+`review-spec` is the usual front door. In the common path, it does not just critique the spec. It either generates a numbered questions artifact immediately when structured clarification is needed, or it moves straight to plan generation when the spec is already clear enough. The discrete `generate-questions` and `generate-plan` stages still exist when you want tighter manual control, but most users can start with `review-spec` and follow the prompt it gives them next.
 
 ### Installation
 
@@ -701,7 +705,7 @@ Expected result:
 
 - the AI reviews the spec for ambiguity, contradictions, missing constraints, and likely implementation traps
 - the AI points out where the spec already aligns with the repo and where it conflicts or leaves risk unresolved
-- if structured clarification is needed, the AI creates `specs/006-auth-questions.md` and tells you to answer it and then run `fold-questions`
+- if structured clarification is needed, the AI creates `specs/006-auth-questions-01.md` and tells you to answer it and then run `fold-questions`
 - if no structured clarification is needed, the AI can move directly to `specs/006-auth-plan.md` and tell you to review the plan, approve it, and then run `implement-next-phase`
 
 This is the default entry point for the skill.
@@ -728,30 +732,30 @@ Generate questions for 006-auth-spec.md
 
 Expected result:
 
-- the AI creates `specs/006-auth-questions.md`
+- the AI creates `specs/006-auth-questions-01.md`
 - you answer that file directly
 - you then ask the AI to fold the answers back into the spec
-- the AI either deletes `specs/006-auth-questions.md` if clarification is complete or gives you a refreshed `specs/006-auth-questions.md` with only the still-open items
+- the AI either leaves `specs/006-auth-questions-01.md` as resolved history if clarification is complete or creates `specs/006-auth-questions-02.md` with only the still-open items
 
 Use this stage when you want to skip the combined `review-spec` entry point and force the clarification loop directly.
 
 #### Fold answered questions back into the spec and continue the clarification loop
 
 ```text
-Use the human-gated-spec-driven-ai-development skill to fold-questions from 006-auth-questions.md into 006-auth-spec.md
+Use the human-gated-spec-driven-ai-development skill to fold-questions from 006-auth-questions-01.md into 006-auth-spec.md
 ```
 
 Natural phrasing:
 
 ```text
-Fold questions from 006-auth-questions.md back into the spec
+Fold questions from 006-auth-questions-01.md back into the spec
 ```
 
 Expected result:
 
 - the AI updates `specs/006-auth-spec.md`
-- if the answers are sufficient, it deletes `specs/006-auth-questions.md` by default
-- if the answers are still not sufficient, it refreshes `specs/006-auth-questions.md` with a smaller, cleaner set of unresolved questions
+- if the answers are sufficient, it leaves `specs/006-auth-questions-01.md` in place as the record of that clarification pass
+- if the answers are still not sufficient, it creates `specs/006-auth-questions-02.md` with a smaller, cleaner set of unresolved questions
 - once the updated spec is ready, you review and approve it before moving on to planning
 - if approved, you continue by asking for `generate-plan`
 
@@ -841,9 +845,9 @@ This stage is optional. It is an AI assistant for the developer's final review, 
 One complete session might look like this:
 
 1. Developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to review-spec for specs/006-auth-spec.md`
-2. If the AI created `specs/006-auth-questions.md`, the developer answers that file
-3. Developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to fold-questions from 006-auth-questions.md into 006-auth-spec.md`
-4. If the AI refreshed `specs/006-auth-questions.md`, the developer answers it and then asks the AI to run `fold-questions` again
+2. If the AI created `specs/006-auth-questions-01.md`, the developer answers that file
+3. Developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to fold-questions from 006-auth-questions-01.md into 006-auth-spec.md`
+4. If the AI created `specs/006-auth-questions-02.md`, the developer answers it and then asks the AI to run `fold-questions` again
 5. Once the AI resolves the questions, the developer reviews and approves `specs/006-auth-spec.md`
 6. If `review-spec` did not already generate the plan, the developer asks the AI: `Use the human-gated-spec-driven-ai-development skill to generate-plan for 006-auth-spec.md`
 7. Developer reviews and approves `specs/006-auth-plan.md`
