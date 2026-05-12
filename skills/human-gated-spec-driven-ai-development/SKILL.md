@@ -83,7 +83,9 @@ For naming, prefer:
 - `specs/001-phase-01-retro.md`
 - `specs/001-auth-phase-01-retro.md`
 
-The label is optional and exists only to help developers recognize the workstream at a glance. The three-digit numeric prefix remains the primary grouping key, and if a label is used it should stay consistent across the related artifact set.
+The label is optional and exists only to help developers recognize the workstream at a glance. The three-digit numeric prefix remains the primary grouping key, and if a label is used it must stay consistent across every related artifact in the set.
+
+Label propagation rule: whenever the working spec uses a label (for example `001-auth-spec.md`), every artifact you create or update for the same cycle must include the same label. That includes questions artifacts (`001-auth-questions-YY.md`), the plan (`001-auth-plan.md`), phase review artifacts (`001-auth-phase-NN-review.md`), and phase retro artifacts (`001-auth-phase-NN-retro.md`). Do not drop the label, do not change the label between artifacts, and do not mix labeled and unlabeled filenames within one cycle. Before creating any new artifact, check the existing spec filename for a label and reuse it verbatim.
 
 For tiny or low-risk work, a lighter version of the workflow is acceptable:
 

@@ -33,10 +33,10 @@ Use this structure when the user asks for a spec review:
 
 ## questions artifact
 
-Create `specs/NNN-questions-01.md` or the next numbered `specs/NNN-questions-YY.md` file with this structure:
+Create `specs/NNN-questions-01.md` or the next numbered `specs/NNN-questions-YY.md` file with this structure. If the related spec uses a label (for example `001-auth-spec.md`), include the same label in the questions filename (`specs/001-auth-questions-01.md`). The label must stay consistent across the entire artifact set.
 
 ```md
-# Questions for Spec 001
+# Questions for Spec 001 (or 001-auth)
 
 ## Repo Context Checked
 - file or directory: relevant fact already established
@@ -68,15 +68,15 @@ Use blockquoted labels for comments and feedback:
 ## User gate
 - answer this file directly, preferably using `> Decision:` for settled answers and `> Question:` for follow-up uncertainty
 - when you are ready, run `fold-questions` rather than skipping to planning
-- example prompt: `Use the human-gated-spec-driven-ai-development skill to fold-questions from 001-questions-01.md into 001-spec.md`
+- example prompt: `Use the human-gated-spec-driven-ai-development skill to fold-questions from 001-questions-01.md into 001-spec.md` (or `001-auth-questions-01.md` into `001-auth-spec.md` when a label is used)
 ```
 
 ## plan format
 
-Use this plan structure:
+Use this plan structure. If the related spec uses a label, the plan filename must use the same label (`specs/001-auth-plan.md`).
 
 ```md
-# Plan 001
+# Plan 001 (or 001-auth)
 
 ## Repo Context Checked
 - file or directory: current module or contract to preserve
@@ -110,7 +110,7 @@ Goal: [one sentence]
 
 ## phase review artifact
 
-Use `specs/001-phase-01-review.md`:
+Use `specs/001-phase-01-review.md`, or `specs/001-auth-phase-01-review.md` when the related spec and plan use a label. Always carry the spec's label forward into the review filename:
 
 ```md
 # Phase 01 Review
@@ -140,12 +140,12 @@ Use `specs/001-phase-01-review.md`:
 ## User gate
 - review this artifact and implementation evidence
 - if approved, run `implement-next-phase` for the next phase or `final-review` if all phases are complete
-- example prompt: `Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-plan.md`
+- example prompt: `Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-plan.md` (or `001-auth-plan.md` when a label is used)
 ```
 
 ## phase retro artifact
 
-Use `specs/001-phase-01-retro.md`:
+Use `specs/001-phase-01-retro.md`, or `specs/001-auth-phase-01-retro.md` when the related spec and plan use a label. Always carry the spec's label forward into the retro filename:
 
 ```md
 # Phase 01 Retrospective
@@ -204,5 +204,5 @@ Use this structure:
 ## User gate
 - review final implementation, tests, and open risks
 - if approved, treat the work as complete; otherwise start another spec or implementation cycle
-- example prompt: `Use the human-gated-spec-driven-ai-development skill to review-spec for specs/002-spec.md`
+- example prompt: `Use the human-gated-spec-driven-ai-development skill to review-spec for specs/002-spec.md` (or `specs/002-auth-spec.md` when a label is used)
 ```
