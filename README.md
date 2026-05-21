@@ -25,6 +25,8 @@
 
 **Human-Gated Spec-Driven AI Development** is a practical way to use AI for real software work without giving up control of requirements, sequencing, review, or quality. It makes the spec the source of truth, keeps approval with the developer, and turns chat-only progress into durable artifacts that survive across sessions, tools, and teammates.
 
+The spec defines **what** should be built and why. The plan defines **how** the AI will sequence and implement that work.
+
 The payoff is simple: less scope drift, clearer review points, better handoffs, and fewer moments where fast AI output outruns human understanding.
 
 ---
