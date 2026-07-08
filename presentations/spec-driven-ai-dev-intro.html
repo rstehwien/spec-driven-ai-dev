@@ -222,7 +222,7 @@
   #deck .gatecard p { margin: 0; font-size: 0.85em; color: var(--muted); }
 
   /* case study stat blocks */
-  #deck .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2em; }
+  #deck .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2em; }
   #deck .stat {
     border-radius: 10px;
     padding: 1.1em 1.3em;
@@ -405,7 +405,7 @@
       <div class="steprow gaterow"><span class="actor a-human who">HUMAN</span><span class="what"><strong>Gate 2:</strong> approves the plan — and commits spec + plan before work begins</span><span class="doc">git commit</span></div>
       <div class="steprow"><span class="actor a-ai who">AI</span><span class="what">Implements <strong>one phase only</strong>, runs the full test suite, updates the plan</span><span class="doc">plan.md &#8635;</span></div>
       <div class="steprow gaterow"><span class="actor a-human who">HUMAN</span><span class="what"><strong>Gate 3:</strong> reviews the phase; approves and commits — repeat for every phase</span><span class="doc">review &middot; retro &middot; git commit</span></div>
-      <div class="steprow gaterow"><span class="actor a-human who">HUMAN</span><span class="what"><strong>Gate 4:</strong> final review of the whole implementation — then merge to main</span><span class="doc">GitHub merge</span></div>
+      <div class="steprow gaterow"><span class="actor a-human who">HUMAN</span><span class="what"><strong>Gate 4:</strong> final review of the whole implementation — then open a pull request to merge to develop</span><span class="doc">GitHub PR &rarr; develop</span></div>
     </div>
     <div class="notes"><span class="t">~1.5 MIN</span> — This is the map for the next four slides, so move briskly. Point at the color coding: amber = human judgment, green = AI labor, mixed = collaboration. Call out the commit rhythm: after the approved plan and after every approved phase — each one a safe rollback point. The human owns all git operations; the AI never commits or merges.</div>
   </section>
@@ -506,7 +506,7 @@ or run in the background?
       <li><strong>Record and commit.</strong> On approval the AI writes the phase review and retro files; you make a checkpoint commit. If the next phase goes sideways, you roll back cheaply.</li>
       <li><strong>Repeat</strong> until every phase in the plan is complete.</li>
       <li><strong>Final review.</strong> One pass across the whole implementation against the spec and plan — cross-phase issues, cleanup, docs. Bounded improvement passes repeat until you approve.</li>
-      <li><strong>Ship.</strong> Merge the finished branch into main on GitHub. The merge is yours, like every other git operation.</li>
+      <li><strong>Ship.</strong> Open a pull request to merge the finished branch into develop on GitHub. The PR is yours, like every other git operation.</li>
     </ul>
     <div class="notes"><span class="t">~1 MIN</span> — This closes the loop slide 9 opened: implement &rarr; validate &rarr; review &rarr; record &rarr; commit &rarr; next phase; then final review &rarr; merge. The rhythm to convey: every approved phase is a durable, committed checkpoint — progress never depends on a live AI session.</div>
   </section>
@@ -529,28 +529,33 @@ or run in the background?
     <div class="notes"><span class="t">~1 MIN</span> — This answers "why files and not just better prompting." Chat is ephemeral and single-player; files are durable and shared. Same reason we don't keep requirements in Slack threads.</div>
   </section>
 
-  <!-- 11 · CASE STUDY -->
+  <!-- 12 · CASE STUDY -->
   <section class="slide">
     <div class="eyebrow">Case study</div>
     <h2>Built this way: <code class="chip">fdsh-mock-ridp-rba-service</code></h2>
-    <p class="lede placeholder">[One sentence on what the service does and why it was needed.]</p>
+    <p class="lede">A fixture-driven mock of the CMS RIDP-RBA identity-proofing service — so teams can test proofing flows without running <strong>real</strong> identity checks.</p>
     <div class="stats">
       <div class="stat win">
-        <span class="label">With this process</span>
-        <div class="value placeholder">[X days]</div>
-        <span class="sub placeholder">[spec + clarification + N phases; your actual elapsed / effort numbers]</span>
+        <span class="label">Human + AI partnership</span>
+        <div class="value">~49 hrs</div>
+        <span class="sub">1 week, 1 day, 1 hour tracked — human authored the specs, plans, and reviews; AI generated the code, tests, and docs.</span>
       </div>
       <div class="stat">
-        <span class="label">Conventional estimate</span>
-        <div class="value placeholder">[Y weeks]</div>
-        <span class="sub placeholder">[how you derived the estimate — prior similar service, team sizing, etc.]</span>
+        <span class="label">Pure-human, like-for-like</span>
+        <div class="value">4.5&ndash;6.5 wks</div>
+        <span class="sub">~180&ndash;260 hrs for one mid-level Spring Boot dev to build the same artifact set by hand &mdash; <strong>~3.7&times;&ndash;5.3&times; slower</strong>.</span>
+      </div>
+      <div class="stat">
+        <span class="label">Faster, but less</span>
+        <div class="value">1.5&ndash;3.5 wks</div>
+        <span class="sub">A senior who'd built it before (~2.5&ndash;3.5), or a stripped MVP (~1.5&ndash;2) &mdash; but that cuts the tests, docs, and spec trail. Not what was built.</span>
       </div>
     </div>
-    <p class="lede placeholder">[Optional third line: quality notes — test coverage, review findings, defects since ship.]</p>
-    <div class="notes"><span class="t">~2.5 MIN — YOURS TO FILL IN</span> — Replace every orange bracket before presenting. Suggested beats: what the service is &rarr; how many specs/phases it took &rarr; the time comparison &rarr; one moment where a gate caught something &rarr; what the artifacts let you hand to reviewers. Concrete numbers here carry the whole talk.</div>
+    <p class="lede">Not a bare stub: <strong>~5,200 LOC of Java</strong>, ~3,500 LOC of tests, 5 JSON schemas with startup validation, a 495-line README, and 16 spec/plan documents that drove the build.</p>
+    <div class="notes"><span class="t">~2.5 MIN</span> — The headline is the multiplier: ~49 hours vs. a 4.5&ndash;6.5 week pure-human build for the <em>same</em> quality bar (~3.7&times;&ndash;5.3&times;). Get ahead of the skeptic who thinks the estimate is inflated: yes, a human could go faster &mdash; a senior who'd done it before in ~2.5&ndash;3.5 weeks, or a minimum-viable stub in ~1.5&ndash;2 &mdash; but the faster numbers buy less: they skip the contract/layout/startup tests, the 495-line README, and the 16 spec/plan docs. Those artifacts are exactly what a pure-human build rarely produces; the process makes them a byproduct. The savings aren't typing speed &mdash; they're the AI generating boilerplate-heavy test classes, schema-validation scaffolding, and fixture wiring once the human-authored specs and plans were in place. Source: EXV-490 time tracking + coding-estimate write-up.</div>
   </section>
 
-  <!-- 12 · RIGHT-SIZING -->
+  <!-- 13 · RIGHT-SIZING -->
   <section class="slide">
     <div class="eyebrow">Fitting it to the work</div>
     <h2>Match the weight to the task</h2>
@@ -566,13 +571,13 @@ or run in the background?
     <div class="notes"><span class="t">~1 MIN</span> — Defuses "this seems heavy." A one-line patch doesn't need a spec, and the process says so itself. The full version is for work that has to survive days, handoffs, and review.</div>
   </section>
 
-  <!-- 13 · CLOSE -->
+  <!-- 14 · CLOSE -->
   <section class="slide">
     <div class="eyebrow">Takeaway</div>
     <h1>Write it down first.<br>Approve it in steps.<br><span class="accent">Keep the human in charge.</span></h1>
     <ul class="tight">
       <li>Templates, a step-by-step guide, and a real worked example: <span class="mono">github.com/rstehwien/spec-driven-ai-dev</span></li>
-      <li>Works with Claude Code and Codex today — <code class="chip">./deploy.sh</code> installs it.</li>
+      <li>Works with Claude Code, Codex, and Copilot today — <code class="chip">./deploy.sh</code> installs it.</li>
       <li>Easiest first try: one medium-sized feature, half-page spec, approve phase one.</li>
     </ul>
     <div class="notes"><span class="t">~1 MIN + Q&amp;A</span> — Land the three-line thesis and invite questions. If the room is quiet: "What's a feature on our backlog you'd trust an AI with under these gates — and one you wouldn't?"</div>
