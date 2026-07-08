@@ -29,4 +29,5 @@ deploy_skill() {
 
 deploy_skill "${HOME}/.claude" ".claude"
 deploy_skill "${HOME}/.codex" ".codex"
-# copilot will read the .claude/skills directory, so we don't need to deploy it separately
+deploy_skill "${HOME}/.agents" ".agents"
+# copilot will read .claude and .agents, so we don't need to deploy it separately
