@@ -23,11 +23,15 @@
 
 ## Abstract
 
-**Human-Gated Spec-Driven AI Development** is a practical way to use AI for real software work without giving up control of requirements, sequencing, review, or quality. It makes the spec the source of truth, keeps approval with the developer, and turns chat-only progress into durable artifacts that survive across sessions, tools, and teammates.
+**Human-Gated Spec-Driven AI Development** is a way to use AI for real software work that produces durable, portable artifacts instead of chat-resident state. The spec, the clarification questions, the plan, and the plan's current checklist state all live in named markdown files in `specs/`. That choice is the whole point: it lets your project state survive token exhaustion, context resets, and handoffs between models — including handoffs between a frontier model planning the work and a local model executing parts of it.
 
-The spec defines **what** should be built and why. The plan defines **how** the AI will sequence and implement that work.
+Modern agents plan well *within* a session. This methodology is about what happens *between* sessions, between models, and between humans.
 
-The payoff is simple: less scope drift, clearer review points, better handoffs, and fewer moments where fast AI output outruns human understanding.
+The workflow keeps the spec as the source of truth and the developer in charge of approval at four points: the working spec, the phased plan, each completed phase, and the final implementation. The AI prepares work for review; the human owns commits, pull requests, and delivery.
+
+The payoff is operational: less scope drift, clearer review points, better handoffs between sessions and models, and fewer moments where fast AI output outruns human understanding.
+
+> **When this is overkill:** For tiny bug fixes, one-off scripts, or throwaway prototypes, this process is more discipline than the work needs. See [Choosing the Right Weight](#choosing-the-right-weight) for a lighter version. The full workflow is built for work that has to survive context resets, model swaps, or review by someone other than the original author.
 
 ---
 
@@ -35,17 +39,19 @@ The payoff is simple: less scope drift, clearer review points, better handoffs, 
 
 If you want the shortest usable version of this workflow, do this:
 
-1. The developer writes a short spec in `specs/NNN-spec.md` or `specs/NNN-<label>-spec.md`.
+1. The developer writes a short spec in `specs/NNN-<label>-spec.md`.
 2. The AI reviews the spec for ambiguity, missing constraints, and risky assumptions.
-3. If clarification is needed, the AI captures unresolved questions in `specs/NNN-questions-YY.md` or `specs/NNN-<label>-questions-YY.md`, and the developer answers them.
+3. If clarification is needed, the AI captures unresolved questions in `specs/NNN-<label>-questions-YY.md`, and the developer answers them.
 4. The AI folds those answers back into the spec and either leaves that questions set as a resolved historical artifact or creates the next numbered questions set with only the remaining unresolved items.
 5. Steps 3 and 4 repeat until the spec is clear enough to plan.
 6. When the spec is ready, the developer reviews and approves the working spec.
-7. The AI generates a phased plan, and the developer reviews it, either requesting revisions or approving it.
+7. The AI generates a phased plan in `specs/NNN-<label>-plan.md`, and the developer reviews it, either requesting revisions or approving it.
 8. Once the spec and plan are approved, the developer should strongly consider creating a checkpoint commit before implementation begins.
 9. The AI implements one phase only, runs the full test suite, and updates the plan and related artifacts before the developer reviews the result.
-10. When a phase is approved, the developer should strongly consider creating another checkpoint commit before beginning the next phase.
+10. When a phase is approved, the AI updates `specs/NNN-<label>-phase-NN-review.md` and `specs/NNN-<label>-phase-NN-retro.md`, and the developer should strongly consider creating another checkpoint commit before beginning the next phase.
 11. After the last phase, the developer performs a final implementation review and can either request improvements or approve completion.
+
+The label is optional; the three-digit numeric prefix is what groups artifacts in one cycle. When this README shows a filename, it uses the labeled form for brevity.
 
 In one sentence: the spec stays primary, the human stays in charge, and the AI only moves through explicit gates.
 
@@ -56,67 +62,58 @@ In one sentence: the spec stays primary, the human stays in charge, and the AI o
 AI tools can accelerate software work dramatically, but unstructured usage creates predictable problems:
 
 - implementation starts before requirements are clear
-- the model silently makes architectural choices
-- the generated code drifts beyond the intended scope
-- code quality varies across sessions
-- context windows fill up and continuity is lost
+- the model silently makes architectural choices that nobody approved
+- generated code drifts beyond the intended scope
+- code quality varies across sessions because there is no shared baseline
+- context windows fill up and continuity is lost mid-feature
+- a swap to a different model means starting over, because state lived in chat
+- a long-running agent's hallucinations get committed because nothing forces a fresh, file-grounded check
+- rationale for past decisions disappears with the session that produced it
 - review becomes reactive instead of designed into the workflow
+- run out of tokens on a given model and need to wait for hours or switch to a different model
 
-In practice, many teams discover that the biggest challenge is not getting AI to write code. The biggest challenge is creating a process that keeps humans in charge of requirements, sequencing, boundaries, and approval while still benefiting from AI speed.
+In practice, the biggest challenge is not getting AI to write code. The biggest challenge is creating a process that keeps humans in charge of requirements, sequencing, boundaries, and approval — and that keeps project state portable enough to survive a context reset, a model swap, or a handoff to a different agent — while still benefiting from AI speed.
 
 Human-Gated Spec-Driven AI Development addresses that problem directly.
 
 ---
 
-## Why “Human-Gated” Matters
+## Designed for Model and Context Handoffs
 
-The most important word in the title is **human-gated**.
+The single most important design choice in this workflow is that **project state lives in files, not in chat**. The spec, the clarification questions, the plan, and the plan's checklist state are all durable markdown files under `specs/`. Once you accept that constraint, several practical scenarios become possible that chat-based AI workflows do not support:
 
-This process does not assume the AI is an autonomous software engineer. It assumes AI is a powerful collaborator that still requires:
+- **Resume across sessions.** A new context — same model, fresh window — picks up the work by reading the spec and plan and checking the current checklist state. There is no need to reconstruct intent from previous conversation.
+- **Swap models between phases.** A model better suited to a specific phase (longer context, stronger reasoning, faster, cheaper) can take over because it has the same files to read.
+- **Recover from degraded long-context behavior.** When a long-running session starts hallucinating or losing track, a fresh context picks up where the artifacts say the work stands, not where the chat history suggests it does.
+- **Mix models — including local ones — across phases.** Because the spec and plan are durable files, you can route different phases to different models. A natural split is to use stronger models for spec drafting, clarification, and plan generation, and lighter or local models for bounded implementation phases or codebase reconnaissance where the quality ceiling is acceptable and the privacy, cost, or speed wins matter. This is a possibility the file-based artifacts keep open rather than a workflow the author runs every day; gentle-pi has the same property through Pi's per-agent model routing. The point is that durable artifacts make this kind of split practical regardless of which agent or hosting setup you use.
 
-- developer judgment
-- developer approval
-- developer accountability
-- developer responsibility for tradeoffs and correctness
+A schematic handoff:
 
-The developer gates are what make the process safe to scale.
+```mermaid
+flowchart LR
+    A[Frontier model<br/>drafts spec, clarifies,<br/>generates plan] --> B[(specs/<br/>NNN-&lt;label&gt;-spec.md<br/>NNN-&lt;label&gt;-questions-YY.md<br/>NNN-&lt;label&gt;-plan.md)]
+    B --> C[Frontier model<br/>Phase 01<br/>implementation]
+    B --> D[Local model<br/>Phase 02<br/>implementation<br/>or research / grep]
+    B --> E[New context<br/>same model<br/>Phase 03<br/>implementation]
+    C --> F[(updated plan checklist<br/>phase review<br/>phase retro)]
+    D --> F
+    E --> F
+    F --> G[Developer<br/>reviews, approves,<br/>commits]
+```
 
-Without gates, AI can move quickly in the wrong direction. With gates, speed becomes more trustworthy.
-
-At minimum, the workflow expects developer approval at four points:
-
-1. developer approval of the working spec
-2. developer approval of the phased plan
-3. developer approval of each completed phase
-4. developer approval of final completion or release
-
-The developer also remains responsible for repository and delivery actions:
-
-- code review decisions
-- commits and branch history
-- pull requests and GitHub review handling
-
-In this workflow, the AI prepares work for review, but the human remains the delivery authority.
+Modern Claude, Codex, and Antigravity ship capable planning modes that ask clarifying questions and structure work before implementation. They plan well *within* a session. But unless explicitly prompted, they leave their plans and clarifications in chat state that does not survive the session, cannot be cited from another agent, and cannot be handed to a second model. That is the gap this methodology fills: persistence and portability of planning state, not planning quality itself.
 
 ---
 
-## Why “Spec-Driven” Matters
+## What “Human-Gated” and “Spec-Driven” Each Mean
 
-The second important word is **spec-driven**.
+**Human-gated** means the AI is a collaborator, not an autonomous engineer. The workflow expects explicit developer approval at four points: the working spec, the phased plan, each completed phase, and final completion or release. The developer also owns the repository actions outside the AI's authority — code review decisions, commits and branch history, pull requests, and GitHub review handling. The AI prepares work for review; the human remains the delivery authority.
 
-In many AI coding workflows, the code becomes the first concrete artifact and the requirements become retroactive explanation. That is backwards.
+Without gates, AI can move quickly in the wrong direction. With gates, speed becomes more trustworthy.
 
-A spec-driven workflow makes the spec the control plane for:
+**Spec-driven** means the spec is the control plane, not retroactive explanation for whatever was implemented. Planning, implementation, review, testing, and revision all anchor back to the spec. When the spec changes, downstream artifacts can change with it; what stays constant is that the project remains tied to explicit intent rather than drifting through chat history.
 
-- planning
-- implementation
-- review
-- testing
-- revision
-
-When the spec changes, the plan can change. When the plan changes, implementation can change. But the project remains anchored to explicit intent.
-
-This is what gives the workflow traceability. Requirements, sequencing, implementation, and review all remain connected to an explicit artifact rather than drifting through chat history.
+Together, the two ideas keep responsibility with the developer and keep project state legible: a clear thing to approve, a clear authority approving it, and a paper trail that survives the session that produced it.
 
 ---
 
@@ -201,20 +198,54 @@ Not every task needs the full version of the process.
 
 ---
 
+## How This Compares to Other Spec-Driven Approaches
+
+Several other methodologies cover similar ground. The high-level arc — spec, plan, phased implementation, markdown artifacts — is shared. The differences are deliberate trade-offs.
+
+| Aspect | GitHub Spec Kit | OpenSpec | gentle-pi | This workflow |
+| --- | --- | --- | --- | --- |
+| Surface | Slash commands + templates in 30+ agents | CLI + slash commands in 25+ agents | Pi runtime only (explicitly non-portable) | Plain markdown files in `specs/` |
+| Phases | Spec → Plan → Tasks → Implement | Proposal → Design → Tasks → Spec deltas | 10 phases: init → explore → proposal → spec → design → tasks → apply → verify → sync → archive | 4 gates: spec → plan → each phase → final |
+| Clarification | Chat or slash commands | Inline in proposal/design | Chat by default; file fallback inside `proposal.md` | Durable numbered `NNN-<label>-questions-YY.md` with `> Decision:` / `> Question:` |
+| Spec evolution | Edits to the spec file | **Formal deltas** (ADDED / MODIFIED / REMOVED, RFC 2119, Given/When/Then) | Inherits OpenSpec deltas + archives to immutable timestamped folders | Free-form edits + numbered questions history |
+| Per-agent model routing | Not explicit | Not explicit | First-class via `/gentle:models` | Implicit — point a different agent or model at the same files |
+| Design goal | Structured context for your agent | Lightweight, brownfield-first, specs as living docs | Controlled coding harness over Pi | Project state that survives model and context handoffs |
+
+A few honest notes on positioning:
+
+- **gentle-pi reaches similar conclusions about artifact-centric work.** Its "Artifacts over floating chat context" framing is close to the design goal of this workflow. The two main differences are that gentle-pi is Pi-only by design (the orchestrator explicitly says *"Do not claim portability outside the Pi runtime"*), and that gentle-pi's clarification defaults to chat with a file-based fallback rather than a durable numbered artifact.
+- **OpenSpec's spec deltas are a real engineering contribution this workflow does not match.** ADDED / MODIFIED / REMOVED requirement operations with RFC 2119 keywords and Given/When/Then scenarios are more rigorous than free-form spec edits. The numbered questions history in this workflow captures *why* the spec evolved, not *what* changed structurally. The two ideas are complementary.
+- **Spec Kit is the mainstream baseline.** If you want the most polished, broadly supported slash-command experience inside a single agent, Spec Kit is the right choice. This workflow is for cases where artifact portability across sessions, models, and agents matters more than slash-command polish.
+
+A rough decision guide:
+
+| If you want… | Choose |
+| --- | --- |
+| Mainstream, polished, slash-command-driven SDD inside one agent | Spec Kit |
+| Formal requirement evolution and diffable specs | OpenSpec |
+| A controlled harness with per-agent model routing and strict TDD, on top of Pi | gentle-pi |
+| Plain-file portability across sessions, models, and agents, with a durable clarification artifact | This workflow |
+
+None of these are mutually exclusive. Spec Kit's templates work alongside this workflow's questions convention. OpenSpec's delta format can be adopted on top of any of them. gentle-pi inherits OpenSpec's delta semantics for free.
+
+For a deeper comparison — including each methodology's strengths, blind spots, and what each could borrow from the others — see [`comparison.md`](./comparison.md).
+
+---
+
 ## Process Flow
 
 ```mermaid
 flowchart TD
-    A[Developer drafts initial spec] --> B[AI reviews spec for ambiguity, gaps, risks, and contradictions]
+    A[Developer drafts initial spec<br/>in NNN-&lt;label&gt;-spec.md] --> B[AI reviews spec for ambiguity, gaps, risks, and contradictions]
     B --> C{Clarification needed?}
-    C -- Yes --> D[AI generates NNN-questions-YY.md or NNN-label-questions-YY.md]
+    C -- Yes --> D[AI generates NNN-&lt;label&gt;-questions-YY.md]
     D --> E[Developer answers questions artifact]
-    E --> F[AI folds answers back into spec]
+    E --> F[AI folds answers back into NNN-&lt;label&gt;-spec.md]
     F --> G{Questions fully resolved?}
     G -- No --> D
     G -- Yes --> H[Developer reviews and approves working spec]
     C -- No --> H
-    H --> I[AI generates phased plan with goals, checklist tasks, acceptance criteria, and risks]
+    H --> I[AI generates phased plan in NNN-&lt;label&gt;-plan.md<br/>with goals, checklist tasks, acceptance criteria, and risks]
     I --> J{Developer approves plan?}
     J -- No, revise plan --> I
     J -- Yes --> K[Developer may create checkpoint commit for approved spec and plan]
@@ -226,7 +257,7 @@ flowchart TD
     O -- Yes --> P[Developer reviews phase for correctness, scope, and design principles]
     P --> Q{Phase approved?}
     Q -- No --> M
-    Q -- Yes --> R[AI updates plan checklist, review notes, and retrospective]
+    Q -- Yes --> R[AI updates plan checklist in NNN-&lt;label&gt;-plan.md<br/>and writes NNN-&lt;label&gt;-phase-NN-review.md<br/>and NNN-&lt;label&gt;-phase-NN-retro.md]
     R --> S[Developer may create checkpoint commit for approved phase]
     S --> T{More phases remain?}
     T -- Yes --> L
@@ -244,7 +275,7 @@ flowchart TD
 
 ### 1. Draft the Initial Spec
 
-The process starts with a written spec prepared by the developer. It does not need to be perfect, but it does need to state enough intent to anchor the rest of the work.
+The process starts with a written spec prepared by the developer, saved as `specs/NNN-<label>-spec.md`. It does not need to be perfect, but it does need to state enough intent to anchor the rest of the work.
 
 A useful spec usually includes:
 
@@ -273,9 +304,9 @@ The AI should not jump directly from vague requirements to code. Instead, it sho
 
 This shifts the conversation from “write code” to “clarify intent.”
 
-### 3. Capture Open Questions in `NNN-questions-YY.md` or `NNN-<label>-questions-YY.md`
+### 3. Capture Open Questions in `NNN-<label>-questions-YY.md`
 
-Inline clarification in chat often becomes noisy and hard to reuse. A better pattern is for the AI to create a numbered markdown artifact such as `specs/NNN-questions-01.md` or `specs/NNN-<label>-questions-01.md`.
+Inline clarification in chat often becomes noisy and hard to reuse. A better pattern is for the AI to create a numbered markdown artifact such as `specs/NNN-<label>-questions-01.md`.
 
 That file captures:
 
@@ -322,7 +353,7 @@ After the developer approves the working spec, the AI should generate a plan tha
 - risks or blockers
 - out-of-scope notes
 
-A practical plan format is a markdown document such as `specs/001-plan.md` or `specs/001-auth-plan.md`, where each phase is a section header and each task is tracked with checklist markers:
+A practical plan format is a markdown document at `specs/NNN-<label>-plan.md`, where each phase is a section header and each task is tracked with checklist markers:
 
 - `[ ]` not started
 - `[-]` in progress
@@ -418,24 +449,18 @@ By the time the developer reaches this decision point, the plan checklist should
 
 Once a phase is approved, the AI updates the remaining durable artifacts that record the approved outcome:
 
-- phase review notes
-- phase retrospective
+- `specs/NNN-<label>-phase-NN-review.md` — phase review notes
+- `specs/NNN-<label>-phase-NN-retro.md` — phase retrospective
 
-A common naming convention is:
+The full set of artifacts for one cycle is:
 
-- `specs/001-spec.md`
-- `specs/001-plan.md`
-- `specs/001-phase-01-review.md`
-- `specs/001-phase-01-retro.md`
+- `specs/NNN-<label>-spec.md`
+- `specs/NNN-<label>-questions-YY.md` (one per clarification pass)
+- `specs/NNN-<label>-plan.md`
+- `specs/NNN-<label>-phase-NN-review.md` (one per phase, if used)
+- `specs/NNN-<label>-phase-NN-retro.md` (one per phase, if used)
 
-If you want a human-friendly hint in the filename, an optional label also works well:
-
-- `specs/001-auth-spec.md`
-- `specs/001-auth-plan.md`
-- `specs/001-auth-phase-01-review.md`
-- `specs/001-auth-phase-01-retro.md`
-
-Those updates are not the same as validation. Validation happens in the prior step. This step records the approved outcome so the project state is accurate for the next session, agent, or phase.
+Those review and retro updates are not the same as validation. Validation happens in the prior step. This step records the approved outcome so the project state is accurate for the next session, agent, or phase.
 
 The developer can then decide whether to continue to the next phase, revise the plan, or stop the cycle.
 
@@ -461,28 +486,21 @@ If helpful, the developer can also ask the AI to assist with a full-project fina
 
 For teams or individuals using this process regularly, a simple opinionated file layout helps a lot. Keep workflow artifacts under `specs/` so they stay isolated from general project documentation in `docs/` or elsewhere.
 
+Starter templates for each artifact live in [`templates/specs/`](./templates/specs/). Copy one, replace the `NNN` prefix with the next available three-digit number, and remove the instructional blockquote at the top before approving the artifact.
+
 ```text
 specs/
-  NNN-spec.md
   NNN-<label>-spec.md
-  NNN-plan.md
+  NNN-<label>-questions-01.md
+  NNN-<label>-questions-02.md
   NNN-<label>-plan.md
-  NNN-phase-01-review.md
   NNN-<label>-phase-01-review.md
-  NNN-phase-01-retro.md
   NNN-<label>-phase-01-retro.md
-  NNN+1-spec.md
-  NNN+1-plan.md
+  NNN+1-<label>-spec.md
+  NNN+1-<label>-plan.md
 ```
 
-Clarification artifacts:
-
-```text
-specs/NNN-questions-01.md
-specs/NNN-questions-02.md
-specs/NNN-<label>-questions-01.md
-specs/NNN-<label>-questions-02.md
-```
+The label is optional. Drop it and the bare numeric prefix forms (`NNN-spec.md`, `NNN-questions-01.md`, etc.) are valid. This README uses the labeled form throughout for brevity; pick one style and stay consistent within a cycle.
 
 Recommended rules:
 
@@ -584,6 +602,12 @@ This workflow does not automatically fix:
 - under-skilled reviewers
 - teams that over-trust AI-generated code or AI-generated reviews
 
+It also does not provide everything that more formal spec-driven frameworks do:
+
+- **No formal spec delta semantics.** OpenSpec (and gentle-pi by inheritance) records requirement evolution as `ADDED` / `MODIFIED` / `REMOVED` operations with RFC 2119 keywords and Given/When/Then scenarios. This workflow records spec evolution through plain edits to the working spec plus the numbered questions history. The questions history captures *why* something changed; it does not capture the structural diff with the rigor that OpenSpec's delta format does. If diffable requirements matter for your work, treat that as a gap.
+- **No status engine.** gentle-pi resolves which phase is ready and which artifacts exist through a structured status contract. This workflow expects the developer to read the plan.
+- **No per-session preflight or persona layer.** This workflow assumes you will tell the agent what to do.
+
 The workflow is strongest when paired with clear ownership, solid testing discipline, and thoughtful technical leadership.
 
 ---
@@ -681,20 +705,14 @@ You can install this workflow in major agentic coding tools that support reusabl
 
 ### Prompt Cookbook
 
-These examples assume you are working on `specs/006-auth-spec.md` and related artifacts. The same prompts work with unlabeled names such as `specs/006-spec.md`.
+These examples assume you are working on `specs/006-auth-spec.md` and related artifacts (`specs/006-auth-questions-YY.md`, `specs/006-auth-plan.md`, `specs/006-auth-phase-NN-review.md`, `specs/006-auth-phase-NN-retro.md`). The label is optional; the same prompts work with unlabeled names such as `specs/006-spec.md`.
 
 #### Start with a spec review
 
-Most explicit:
+Canonical:
 
 ```text
 Use the human-gated-spec-driven-ai-development skill to review-spec for specs/006-auth-spec.md
-```
-
-Natural phrasing:
-
-```text
-Review spec 006-auth-spec.md using the human-gated spec-driven workflow
 ```
 
 Short form:
@@ -703,27 +721,16 @@ Short form:
 Review-spec for 006-auth-spec.md
 ```
 
-Expected result:
-
-- the AI reviews the spec for ambiguity, contradictions, missing constraints, and likely implementation traps
-- the AI points out where the spec already aligns with the repo and where it conflicts or leaves risk unresolved
-- if structured clarification is needed, the AI creates `specs/006-auth-questions-01.md` and tells you to answer it and then run `fold-questions`
-- if no structured clarification is needed, the AI can move directly to `specs/006-auth-plan.md` and tell you to review the plan, approve it, and then run `implement-next-phase`
+Expected result: the AI reviews the spec for ambiguity and missing constraints, and either creates `specs/006-auth-questions-01.md` (if structured clarification is needed) and tells you to run `fold-questions` next, or creates `specs/006-auth-plan.md` (if the spec is already clear enough) and tells you to review and approve it before running `implement-next-phase`.
 
 This is the default entry point for the skill.
 
 #### Generate clarification questions
 
-Most explicit:
+Canonical:
 
 ```text
 Use the human-gated-spec-driven-ai-development skill to generate-questions for 006-auth-spec.md
-```
-
-Natural phrasing:
-
-```text
-Generate questions for 006-auth-spec.md using the spec-driven workflow
 ```
 
 Short form:
@@ -732,113 +739,91 @@ Short form:
 Generate questions for 006-auth-spec.md
 ```
 
-Expected result:
+Expected result: the AI creates `specs/006-auth-questions-01.md`. You answer it directly, then run `fold-questions`; the AI either keeps the answered file as resolved history or creates `specs/006-auth-questions-02.md` with the still-open items.
 
-- the AI creates `specs/006-auth-questions-01.md`
-- you answer that file directly
-- you then ask the AI to fold the answers back into the spec
-- the AI either leaves `specs/006-auth-questions-01.md` as resolved history if clarification is complete or creates `specs/006-auth-questions-02.md` with only the still-open items
-
-Use this stage when you want to skip the combined `review-spec` entry point and force the clarification loop directly.
+Use this stage when you want the clarification loop as a separate step instead of using the combined `review-spec` entry point.
 
 #### Fold answered questions back into the spec and continue the clarification loop
+
+Canonical:
 
 ```text
 Use the human-gated-spec-driven-ai-development skill to fold-questions from 006-auth-questions-01.md into 006-auth-spec.md
 ```
 
-Natural phrasing:
+Short form:
 
 ```text
 Fold questions from 006-auth-questions-01.md back into the spec
 ```
 
-Expected result:
-
-- the AI updates `specs/006-auth-spec.md`
-- if the answers are sufficient, it leaves `specs/006-auth-questions-01.md` in place as the record of that clarification pass
-- if the answers are still not sufficient, it creates `specs/006-auth-questions-02.md` with a smaller, cleaner set of unresolved questions
-- once the updated spec is ready, you review and approve it before moving on to planning
-- if approved, you continue by asking for `generate-plan`
+Expected result: the AI updates `specs/006-auth-spec.md`. If the answers are sufficient it leaves the answered questions file in place as history; otherwise it creates `specs/006-auth-questions-02.md` with only the still-open items. Once the spec is ready, review and approve it, then ask for `generate-plan`.
 
 #### Generate a phased plan after the working spec is approved
+
+Canonical:
 
 ```text
 Use the human-gated-spec-driven-ai-development skill to generate-plan for 006-auth-spec.md
 ```
 
-Natural phrasing:
+Short form:
 
 ```text
 Generate plan for 006-auth-spec.md
 ```
 
-Expected result:
-
-- the AI creates or updates `specs/006-auth-plan.md`
-- the plan is broken into reviewable phases with tasks, acceptance criteria, risks, and out-of-scope notes
-- you review the phase order, acceptance criteria, risks, and out-of-scope notes
-- if approved, you continue by asking for `implement-next-phase`
-- once the spec and plan are both approved, this is a strong point for an optional checkpoint commit before implementation begins
+Expected result: the AI creates or updates `specs/006-auth-plan.md` with reviewable phases, each carrying tasks, acceptance criteria, risks, and out-of-scope notes. Review it, and if approved ask for `implement-next-phase`. Approval of spec and plan together is a strong point for an optional checkpoint commit before implementation begins.
 
 #### Implement one phase only
+
+Canonical:
 
 ```text
 Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 006-auth-plan.md
 ```
 
-Natural phrasing:
+Short form:
 
 ```text
 Implement the next phase for 006-auth-plan.md
 ```
 
-Expected result:
-
-- the AI reads the current spec and plan
-- it implements only the next incomplete phase
-- it runs the full test suite before the phase can be considered done
-- it updates plan status, validation evidence, and any requested review or retro artifacts
-- it pauses for your review before the next step
+Expected result: the AI reads the current spec and plan, implements only the next incomplete phase, runs the full test suite before declaring the phase done, updates plan status and validation evidence, and pauses for your review.
 
 #### Optionally record a formal phase review
+
+Canonical:
 
 ```text
 Use the human-gated-spec-driven-ai-development skill to review-phase for 006-auth-plan.md
 ```
 
-Natural phrasing:
+Short form:
 
 ```text
 Review the completed phase for 006-auth-plan.md
 ```
 
-Expected result:
-
-- the AI creates or updates `specs/006-auth-phase-01-review.md`
-- findings are classified as must-fix, should-fix, or optional improvements
-- if you approve and continue, the next invocation acts as implicit approval to move forward
+Expected result: the AI creates or updates `specs/006-auth-phase-01-review.md` with findings classified as must-fix, should-fix, or optional improvements. If you approve and continue, your next stage invocation acts as implicit approval.
 
 This stage is optional. It is an AI assistant for the developer's phase review, not a replacement for it.
 
 #### Optionally run the final review
 
+Canonical:
+
 ```text
 Use the human-gated-spec-driven-ai-development skill to final-review for 006-auth-spec.md and 006-auth-plan.md
 ```
 
-Natural phrasing:
+Short form:
 
 ```text
 Run the final review for 006-auth-spec.md and 006-auth-plan.md
 ```
 
-Expected result:
-
-- the AI reviews the full implementation against the spec and plan
-- it records final findings and go/no-go guidance
-- if you request a bounded improvement pass, the AI should normally rerun the relevant tests and update affected plan or review artifacts before handing it back
-- you decide whether the work is complete or another cycle is needed
+Expected result: the AI reviews the full implementation against spec and plan, records final findings and go/no-go guidance, and pauses for your decision. If you request a bounded improvement pass, the AI reruns the relevant tests and updates affected plan or review artifacts before handing back.
 
 This stage is optional. It is an AI assistant for the developer's final review, not a replacement for it.
 
@@ -876,13 +861,13 @@ If the spec is already clear enough, the shorter path can look like this:
 For a very small change, you can ask for a lighter version of the process:
 
 ```text
-Use the human-gated-spec-driven-ai-development skill in lightweight mode for specs/007-spec.md: review the spec, generate a compact plan, and stop for approval before implementation
+Use the human-gated-spec-driven-ai-development skill in lightweight mode for specs/007-tweak-spec.md: review the spec, generate a compact plan, and stop for approval before implementation
 ```
 
 You can also be even more direct:
 
 ```text
-Use the human-gated-spec-driven-ai-development skill in lightweight mode for 007-spec.md
+Use the human-gated-spec-driven-ai-development skill in lightweight mode for 007-tweak-spec.md
 ```
 
 In lightweight mode, the same principles still apply:
@@ -896,6 +881,6 @@ In lightweight mode, the same principles still apply:
 
 - Name the skill directly when you want maximum reliability.
 - Include the stage name when possible, such as `generate-plan` or `implement-next-phase`.
-- Reference the numbered artifact explicitly, such as `006-spec.md` or `006-plan.md`.
+- Reference the numbered artifact explicitly, such as `006-auth-spec.md` or `006-auth-plan.md`.
 - Keep requests scoped to one stage at a time.
 - If you want the full artifact set, say so. If you want a lighter workflow, say `lightweight mode`.
