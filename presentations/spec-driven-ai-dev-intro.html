@@ -1,0 +1,634 @@
+<title>Human-Gated Spec-Driven AI Development</title>
+<style>
+  :root {
+    --ground: #F6F7F6;
+    --surface: #ECEFEC;
+    --chip: #E3E8E4;
+    --ink: #1B231F;
+    --muted: #57635D;
+    --accent: #1E6E52;
+    --accent-soft: #DCEAE3;
+    --human: #B65C1F;
+    --human-soft: #F3E4D6;
+    --line: #D5DCD6;
+    --code-bg: #202823;
+    --code-ink: #DCE5DE;
+    --code-accent: #7FCBAA;
+    --code-human: #E8A06A;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #131815;
+      --surface: #1B221D;
+      --chip: #232C26;
+      --ink: #E9EDEA;
+      --muted: #96A29B;
+      --accent: #55B98F;
+      --accent-soft: #1E2F27;
+      --human: #E08A4A;
+      --human-soft: #33241A;
+      --line: #2A332E;
+      --code-bg: #0E120F;
+      --code-ink: #D4DED6;
+      --code-accent: #6FC49E;
+      --code-human: #E8A06A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #131815;
+    --surface: #1B221D;
+    --chip: #232C26;
+    --ink: #E9EDEA;
+    --muted: #96A29B;
+    --accent: #55B98F;
+    --accent-soft: #1E2F27;
+    --human: #E08A4A;
+    --human-soft: #33241A;
+    --line: #2A332E;
+    --code-bg: #0E120F;
+    --code-ink: #D4DED6;
+    --code-accent: #6FC49E;
+    --code-human: #E8A06A;
+  }
+  :root[data-theme="light"] {
+    --ground: #F6F7F6;
+    --surface: #ECEFEC;
+    --chip: #E3E8E4;
+    --ink: #1B231F;
+    --muted: #57635D;
+    --accent: #1E6E52;
+    --accent-soft: #DCEAE3;
+    --human: #B65C1F;
+    --human-soft: #F3E4D6;
+    --line: #D5DCD6;
+    --code-bg: #202823;
+    --code-ink: #DCE5DE;
+    --code-accent: #7FCBAA;
+    --code-human: #E8A06A;
+  }
+
+  #deck, #deck * { box-sizing: border-box; }
+  #deck {
+    position: fixed;
+    inset: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: clamp(14px, 1.35vw, 21px);
+    line-height: 1.5;
+    overflow: hidden;
+  }
+  #deck .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+  #deck .slide {
+    position: absolute;
+    inset: 0;
+    display: none;
+    padding: 4.5em 5.5em 5em;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1.3em;
+    max-width: 100%;
+  }
+  #deck .slide.active { display: flex; }
+  @media (prefers-reduced-motion: no-preference) {
+    #deck .slide.active { animation: slidein 220ms ease-out; }
+    @keyframes slidein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  }
+
+  #deck .eyebrow {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.72em;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  #deck h1 {
+    font-size: 2.9em;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1.08;
+    margin: 0;
+    text-wrap: balance;
+    max-width: 22ch;
+  }
+  #deck h2 {
+    font-size: 2.1em;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.12;
+    margin: 0;
+    text-wrap: balance;
+    max-width: 26ch;
+  }
+  #deck p, #deck li { max-width: 64ch; }
+  #deck .lede { font-size: 1.18em; color: var(--muted); max-width: 50ch; }
+  #deck .big-lede { font-size: 1.35em; max-width: 44ch; }
+  #deck strong { font-weight: 700; }
+  #deck .accent { color: var(--accent); }
+  #deck .human { color: var(--human); }
+  #deck .muted { color: var(--muted); }
+
+  #deck ul.tight { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 0.55em; }
+  #deck ul.tight li::marker { color: var(--accent); }
+  #deck ul.tight.humanmarks li::marker { color: var(--human); }
+
+  #deck .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 2.2em; align-items: start; }
+  #deck .col h3 { font-size: 1.15em; font-weight: 700; margin: 0 0 0.5em; }
+
+  #deck .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1.2em 1.4em;
+  }
+  #deck .panel h3 { margin-top: 0; }
+  #deck .panel ul { font-size: 0.92em; }
+  #deck .panel.win { border-color: var(--accent); }
+
+  #deck pre.code {
+    background: var(--code-bg);
+    color: var(--code-ink);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.82em;
+    line-height: 1.65;
+    padding: 1.2em 1.5em;
+    border-radius: 10px;
+    margin: 0;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+  #deck pre.code .k { color: var(--code-accent); }
+  #deck pre.code .h { color: var(--code-human); }
+  #deck pre.code .c { color: #8A968E; }
+
+  #deck code.chip {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.85em;
+    background: var(--chip);
+    padding: 0.12em 0.45em;
+    border-radius: 5px;
+    white-space: nowrap;
+  }
+
+  /* actor pills */
+  #deck .actor {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.68em;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    border-radius: 999px;
+    padding: 0.25em 0.8em;
+    vertical-align: middle;
+  }
+  #deck .actor.a-human { background: var(--human-soft); color: var(--human); }
+  #deck .actor.a-ai { background: var(--accent-soft); color: var(--accent); }
+  #deck .actor.a-both { background: var(--chip); color: var(--ink); border: 1px solid var(--line); }
+  #deck .actor.a-both::before { content: ""; width: 0.55em; height: 0.55em; border-radius: 50%; background: linear-gradient(90deg, var(--human) 50%, var(--accent) 50%); }
+
+  #deck .legend { display: flex; gap: 1em; align-items: center; flex-wrap: wrap; }
+
+  /* step rows for walkthrough */
+  #deck .steps { display: flex; flex-direction: column; gap: 0.5em; }
+  #deck .steprow {
+    display: grid;
+    grid-template-columns: 8.5em 1fr auto;
+    gap: 1.2em;
+    align-items: baseline;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.55em 1.1em;
+  }
+  #deck .steprow .who { justify-self: start; }
+  #deck .steprow .what { font-size: 0.95em; }
+  #deck .steprow .doc { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.75em; color: var(--muted); white-space: nowrap; }
+  #deck .steprow.gaterow { border: 1.5px solid var(--accent); background: var(--accent-soft); }
+
+  #deck table { border-collapse: collapse; font-size: 0.92em; }
+  #deck th, #deck td { text-align: left; padding: 0.55em 1.2em 0.55em 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  #deck th { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.78em; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  #deck td:first-child { font-weight: 700; white-space: nowrap; }
+  #deck .tablewrap { overflow-x: auto; max-width: 100%; }
+
+  /* gate cards */
+  #deck .gates { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1em; }
+  #deck .gatecard { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 1em 1.1em; }
+  #deck .gatecard .n { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--accent); font-weight: 700; font-size: 0.8em; letter-spacing: 0.1em; }
+  #deck .gatecard h3 { margin: 0.3em 0 0.25em; font-size: 1em; font-weight: 700; }
+  #deck .gatecard p { margin: 0; font-size: 0.85em; color: var(--muted); }
+
+  /* case study stat blocks */
+  #deck .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2em; }
+  #deck .stat {
+    border-radius: 10px;
+    padding: 1.1em 1.3em;
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+  #deck .stat.win { border: 1.5px solid var(--accent); background: var(--accent-soft); }
+  #deck .stat .label { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.72em; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  #deck .stat.win .label { color: var(--accent); }
+  #deck .stat .value { font-size: 2.2em; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  #deck .stat .sub { font-size: 0.85em; color: var(--muted); }
+  #deck .placeholder { color: var(--human); font-style: italic; }
+
+  /* footer chrome */
+  #deck .chrome {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 5.5em 1.1em;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.7em;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+  #deck .chrome .navbtns { display: flex; gap: 0.5em; }
+  #deck .chrome button {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    border-radius: 6px;
+    padding: 0.35em 0.9em;
+    font: inherit;
+    cursor: pointer;
+  }
+  #deck .chrome button:hover { border-color: var(--accent); }
+  #deck .chrome button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #deck .progress { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent); transition: width 200ms ease; }
+  @media (prefers-reduced-motion: reduce) { #deck .progress { transition: none; } }
+
+  /* speaker notes */
+  #deck .notes {
+    display: none;
+    position: absolute;
+    right: 1.5em; top: 1.5em;
+    max-width: 30em;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--human);
+    border-radius: 8px;
+    padding: 0.9em 1.1em;
+    font-size: 0.78em;
+    line-height: 1.55;
+    color: var(--muted);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+  }
+  #deck.shownotes .slide.active .notes { display: block; }
+  #deck .notes .t { color: var(--human); font-weight: 700; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.85em; letter-spacing: 0.08em; }
+
+  #deck .filetree { font-size: 0.9em; }
+  #deck .filetree .ann { color: var(--code-accent); }
+
+  #deck .kbdhint { color: var(--muted); font-size: 0.85em; }
+  #deck kbd {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.85em;
+    background: var(--chip);
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 0.05em 0.4em;
+  }
+
+  @media (max-width: 900px) {
+    #deck .slide { padding: 3em 2em 4em; }
+    #deck .cols, #deck .gates, #deck .stats { grid-template-columns: 1fr; gap: 1.2em; }
+    #deck .steprow { grid-template-columns: 1fr; gap: 0.3em; }
+    #deck .chrome { padding: 0 2em 1em; }
+    #deck h1 { font-size: 2.2em; }
+    #deck h2 { font-size: 1.7em; }
+  }
+</style>
+
+<div id="deck">
+
+  <!-- 1 · TITLE -->
+  <section class="slide active">
+    <div class="eyebrow">Robert Stehwien &middot; 15 minutes</div>
+    <h1>Building Software with AI — Without Losing Control</h1>
+    <p class="lede big-lede">An introduction to <strong>spec-driven AI development</strong>: write down what you want before the AI writes code, and approve the work at explicit gates.</p>
+    <p class="kbdhint">Navigate with <kbd>&larr;</kbd> <kbd>&rarr;</kbd> &middot; <kbd>N</kbd> speaker notes &middot; <kbd>F</kbd> fullscreen</p>
+    <div class="notes"><span class="t">~1 MIN</span> — Set expectations: no prior agentic-coding experience assumed. Promise: what spec-driven development is, why it beats just prompting, how the process works step by step, and a real internal service built this way.</div>
+  </section>
+
+  <!-- 2 · TWO WAYS -->
+  <section class="slide">
+    <div class="eyebrow">First, some vocabulary</div>
+    <h2>Two ways to build with AI</h2>
+    <div class="cols">
+      <div class="panel">
+        <h3 class="human">Prompt-driven ("vibe coding")</h3>
+        <ul class="tight humanmarks">
+          <li>Describe what you want in a chat message.</li>
+          <li>The AI writes code immediately.</li>
+          <li>You react to what comes back and prompt again.</li>
+          <li>Requirements live in your head and the chat scrollback.</li>
+        </ul>
+      </div>
+      <div class="panel win">
+        <h3 class="accent">Spec-driven</h3>
+        <ul class="tight">
+          <li>Write down <strong>what to build</strong> in a short document first.</li>
+          <li>The AI critiques it, asks questions, then plans against it.</li>
+          <li>Code gets written <strong>in small approved steps</strong>.</li>
+          <li>Requirements and decisions live in files in the repo.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="notes"><span class="t">~1.5 MIN</span> — Define both without judgment first. Vibe coding is genuinely great for prototypes and one-offs — say so. The question is what happens when the work is real: multi-day, reviewed, maintained.</div>
+  </section>
+
+  <!-- 3 · WHAT GOES WRONG -->
+  <section class="slide">
+    <div class="eyebrow">Why prompting alone breaks down</div>
+    <h2>The failure modes of "just prompt it"</h2>
+    <ul class="tight humanmarks">
+      <li><strong>Code before clarity.</strong> Implementation starts before anyone knows the actual requirements.</li>
+      <li><strong>Silent decisions.</strong> The AI picks an architecture, a library, a data model — and nobody approved it.</li>
+      <li><strong>Scope drift.</strong> Each prompt nudges the code somewhere new; nothing anchors it.</li>
+      <li><strong>"Looks plausible" gets merged.</strong> Confident-sounding output is not the same as correct output.</li>
+      <li><strong>The reasoning evaporates.</strong> Why did we do it this way? The answer lived in a chat that's gone.</li>
+    </ul>
+    <div class="notes"><span class="t">~1.5 MIN</span> — These will land even with people who've only used AI casually — most have seen "confidently wrong" output. The last bullet sets up the files idea later: chat is a terrible system of record.</div>
+  </section>
+
+  <!-- 4 · WHAT A SPEC CHANGES -->
+  <section class="slide">
+    <div class="eyebrow">The fix, part one</div>
+    <h2>A spec turns prompting into engineering</h2>
+    <ul class="tight">
+      <li><strong>Forces clarity before code.</strong> Writing half a page of "what and why" surfaces the questions you didn't know you had.</li>
+      <li><strong>Gives the AI boundaries.</strong> Goals, constraints, and explicit non-goals — instead of guessing your intent.</li>
+      <li><strong>Gives the reviewer a yardstick.</strong> Code is judged against the spec, not against "seems fine."</li>
+      <li><strong>Outlives the conversation.</strong> The spec is a file in the repo — the record of what we meant to build.</li>
+    </ul>
+    <p class="lede">A spec here is <strong>half a page to two pages</strong> of markdown: objective, constraints, non-goals, acceptance criteria. Not a 40-page requirements document.</p>
+    <div class="notes"><span class="t">~1 MIN</span> — Kill the waterfall worry immediately: the spec is short, it's allowed to change, and changing it is explicit rather than accidental. "Non-goals" is worth calling out — telling the AI what NOT to build is half the value.</div>
+  </section>
+
+  <!-- 5 · THE HUMAN GATE -->
+  <section class="slide">
+    <div class="eyebrow">The fix, part two</div>
+    <h2>The human gate keeps it under control</h2>
+    <div class="gates">
+      <div class="gatecard"><span class="n">GATE 1</span><h3>The spec</h3><p>You approve what's being built before any planning.</p></div>
+      <div class="gatecard"><span class="n">GATE 2</span><h3>The plan</h3><p>You approve the phases and sequencing before any code.</p></div>
+      <div class="gatecard"><span class="n">GATE 3</span><h3>Each phase</h3><p>You review every increment — with tests passing — before the next.</p></div>
+      <div class="gatecard"><span class="n">GATE 4</span><h3>Final review</h3><p>You approve the whole result before calling it done.</p></div>
+    </div>
+    <p class="lede">The AI <strong>prepares work for review</strong>; the human approves, commits, and ships. Without gates, AI moves quickly in the wrong direction. With gates, speed becomes trustworthy.</p>
+    <div class="notes"><span class="t">~1.5 MIN</span> — The core reassurance for skeptics: the AI never runs ahead of your understanding. Nothing merges because it "looks plausible" — every gate is a human saying "yes, I understand this, continue."</div>
+  </section>
+
+  <!-- 6 · PROCESS AT A GLANCE -->
+  <section class="slide">
+    <div class="eyebrow">The process at a glance</div>
+    <h2>Who does what, at every step</h2>
+    <div class="legend">
+      <span class="actor a-human">HUMAN</span>
+      <span class="actor a-ai">AI</span>
+      <span class="actor a-both">TOGETHER</span>
+    </div>
+    <div class="steps">
+      <div class="steprow"><span class="actor a-human who">HUMAN</span><span class="what">Drafts the initial spec</span><span class="doc">spec.md</span></div>
+      <div class="steprow"><span class="actor a-ai who">AI</span><span class="what">Reviews it for ambiguity, gaps, and risks — writes its questions to a file</span><span class="doc">questions-01.md</span></div>
+      <div class="steprow"><span class="actor a-both who">TOGETHER</span><span class="what">Human answers in the file; AI folds answers into the spec — loop until solid</span><span class="doc">spec.md &#8635;</span></div>
+      <div class="steprow gaterow"><span class="actor a-human who">HUMAN</span><span class="what"><strong>Gate 1:</strong> approves the working spec</span><span class="doc">&#10003;</span></div>
+      <div class="steprow"><span class="actor a-both who">TOGETHER</span><span class="what">AI drafts a phased plan; human reviews, requests revisions until it's right</span><span class="doc">plan.md</span></div>
+      <div class="steprow gaterow"><span class="actor a-human who">HUMAN</span><span class="what"><strong>Gate 2:</strong> approves the plan — and commits spec + plan before work begins</span><span class="doc">git commit</span></div>
+      <div class="steprow"><span class="actor a-ai who">AI</span><span class="what">Implements <strong>one phase only</strong>, runs the full test suite, updates the plan</span><span class="doc">plan.md &#8635;</span></div>
+      <div class="steprow gaterow"><span class="actor a-human who">HUMAN</span><span class="what"><strong>Gate 3:</strong> reviews the phase; approves and commits — repeat for every phase</span><span class="doc">review &middot; retro &middot; git commit</span></div>
+      <div class="steprow gaterow"><span class="actor a-human who">HUMAN</span><span class="what"><strong>Gate 4:</strong> final review of the whole implementation — then merge to main</span><span class="doc">GitHub merge</span></div>
+    </div>
+    <div class="notes"><span class="t">~1.5 MIN</span> — This is the map for the next four slides, so move briskly. Point at the color coding: amber = human judgment, green = AI labor, mixed = collaboration. Call out the commit rhythm: after the approved plan and after every approved phase — each one a safe rollback point. The human owns all git operations; the AI never commits or merges.</div>
+  </section>
+
+  <!-- 7 · WALKTHROUGH: SPEC -->
+  <section class="slide">
+    <div class="eyebrow">Step by step &middot; 1 of 4</div>
+    <h2>The spec <span class="actor a-human">HUMAN</span></h2>
+    <div class="cols">
+      <pre class="code"><span class="c"># Add CSV Export for Admin Reports</span>
+
+<span class="k">## Objective</span>
+Admins can export the current
+report view as CSV.
+
+<span class="k">## Constraints</span>
+- must respect active filters
+- admins only
+
+<span class="k">## Non-Goals</span>
+- no scheduled exports, no PDF
+
+<span class="k">## Acceptance Criteria</span>
+- export matches filtered table
+- non-admins never see the action</pre>
+      <div class="col">
+        <ul class="tight">
+          <li>Written by the developer — this is the <strong>thinking step</strong>, and it stays human.</li>
+          <li>Doesn't need to be perfect; needs to make the intent legible.</li>
+          <li>Non-goals are load-bearing: they stop the AI from "helpfully" building extra.</li>
+          <li>Lives at <code class="chip">specs/001-csv-export-spec.md</code>.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="notes"><span class="t">~1 MIN</span> — Emphasize how small this is — half a page. The audience should think "I could write that in 15 minutes." Because they could.</div>
+  </section>
+
+  <!-- 8 · WALKTHROUGH: QUESTIONS -->
+  <section class="slide">
+    <div class="eyebrow">Step by step &middot; 2 of 4</div>
+    <h2>The clarification loop <span class="actor a-both">TOGETHER</span></h2>
+    <div class="cols">
+      <pre class="code"><span class="c"># questions-01.md  (written by AI)</span>
+
+Should large exports block the UI
+or run in the background?
+
+<span class="k">&gt; Decision:</span>          <span class="c">(human answers)</span>
+<span class="k">&gt; Async over 10k rows. We hit</span>
+<span class="k">&gt; this exact timeout in reporting.</span>
+
+<span class="h">&gt; Question:</span>          <span class="c">(still open)</span>
+<span class="h">&gt; Row limit configurable</span>
+<span class="h">&gt; per tenant?</span></pre>
+      <div class="col">
+        <ul class="tight">
+          <li>The AI reads the spec and writes its questions <strong>to a file</strong>, not into chat.</li>
+          <li>You answer in your editor, on your own time — think, revise, then continue.</li>
+          <li><code class="chip">&gt; Decision:</code> answers get folded into the spec; open items roll into the next round.</li>
+          <li>Six months later, <strong>why we chose async</strong> is still on disk.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="notes"><span class="t">~1.5 MIN</span> — The AI is genuinely good at finding ambiguity — often better than a human reviewer, because it has no shared assumptions to paper over gaps. And the record of decisions is something even non-AI processes rarely produce.</div>
+  </section>
+
+  <!-- 9 · WALKTHROUGH: PLAN & PHASES -->
+  <section class="slide">
+    <div class="eyebrow">Step by step &middot; 3 of 4</div>
+    <h2>The plan, one phase at a time <span class="actor a-ai">AI</span><span class="actor a-human">HUMAN</span></h2>
+    <div class="cols">
+      <pre class="code"><span class="c">## Phase 02 - CSV generation</span>
+
+- [x] generate CSV from filters
+- [-] handle large exports async
+- [!] delivery flow tests
+      <span class="h">blocked: S3 creds absent</span>
+      <span class="h">in CI — infra ticket #482</span>
+- [ ] content-correctness tests</pre>
+      <div class="col">
+        <ul class="tight">
+          <li>The AI drafts the plan; <strong>you approve it before any code</strong> — reorder, split, cut speculative work.</li>
+          <li>Then it implements <strong>one phase only</strong> — never ahead "while it's there."</li>
+          <li>A phase is done when the <strong>full test suite passes</strong> and you approve — evidence, not confidence.</li>
+          <li>Live checklist: <code class="chip">[ ]</code> todo &nbsp;<code class="chip">[-]</code> doing &nbsp;<code class="chip">[x]</code> done &nbsp;<code class="chip">[!]</code> <span class="human">blocked, with the reason</span>.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="notes"><span class="t">~1 MIN</span> — Two things to stress: the human shapes the plan before any code exists, and bounded phases keep every review small enough to actually review. The next slide covers what happens when a phase finishes.</div>
+  </section>
+
+  <!-- 10 · WALKTHROUGH: CLOSE OUT & SHIP -->
+  <section class="slide">
+    <div class="eyebrow">Step by step &middot; 4 of 4</div>
+    <h2>Closing out a phase — and the work <span class="actor a-human">HUMAN</span></h2>
+    <ul class="tight">
+      <li><strong>Phase review.</strong> With tests green, you review the phase for correctness, scope, and design fit — approve it or send it back for another pass.</li>
+      <li><strong>Record and commit.</strong> On approval the AI writes the phase review and retro files; you make a checkpoint commit. If the next phase goes sideways, you roll back cheaply.</li>
+      <li><strong>Repeat</strong> until every phase in the plan is complete.</li>
+      <li><strong>Final review.</strong> One pass across the whole implementation against the spec and plan — cross-phase issues, cleanup, docs. Bounded improvement passes repeat until you approve.</li>
+      <li><strong>Ship.</strong> Merge the finished branch into main on GitHub. The merge is yours, like every other git operation.</li>
+    </ul>
+    <div class="notes"><span class="t">~1 MIN</span> — This closes the loop slide 9 opened: implement &rarr; validate &rarr; review &rarr; record &rarr; commit &rarr; next phase; then final review &rarr; merge. The rhythm to convey: every approved phase is a durable, committed checkpoint — progress never depends on a live AI session.</div>
+  </section>
+
+  <!-- 11 · EVERYTHING IS A FILE -->
+  <section class="slide">
+    <div class="eyebrow">Why it all lives in files</div>
+    <h2>The paper trail is the product too</h2>
+    <pre class="code filetree">specs/
+  001-csv-export-spec.md            <span class="ann">&larr; what we're building, and why</span>
+  001-csv-export-questions-01.md    <span class="ann">&larr; every decision, with reasoning</span>
+  001-csv-export-plan.md            <span class="ann">&larr; phases + current status</span>
+  001-csv-export-phase-01-review.md <span class="ann">&larr; what was approved, per phase</span>
+  001-csv-export-phase-01-retro.md  <span class="ann">&larr; what we'd do differently</span></pre>
+    <ul class="tight">
+      <li><strong>Pick up where you left off</strong> — tomorrow, next sprint, or after the AI session dies mid-feature.</li>
+      <li><strong>Anyone can take over</strong> — a teammate, a different AI tool, a fresh session. The intent is on disk, not in someone's chat history.</li>
+      <li><strong>Reviews get easier</strong> — the PR comes with the spec, the decisions, and the plan that produced it.</li>
+    </ul>
+    <div class="notes"><span class="t">~1 MIN</span> — This answers "why files and not just better prompting." Chat is ephemeral and single-player; files are durable and shared. Same reason we don't keep requirements in Slack threads.</div>
+  </section>
+
+  <!-- 11 · CASE STUDY -->
+  <section class="slide">
+    <div class="eyebrow">Case study</div>
+    <h2>Built this way: <code class="chip">fdsh-mock-ridp-rba-service</code></h2>
+    <p class="lede placeholder">[One sentence on what the service does and why it was needed.]</p>
+    <div class="stats">
+      <div class="stat win">
+        <span class="label">With this process</span>
+        <div class="value placeholder">[X days]</div>
+        <span class="sub placeholder">[spec + clarification + N phases; your actual elapsed / effort numbers]</span>
+      </div>
+      <div class="stat">
+        <span class="label">Conventional estimate</span>
+        <div class="value placeholder">[Y weeks]</div>
+        <span class="sub placeholder">[how you derived the estimate — prior similar service, team sizing, etc.]</span>
+      </div>
+    </div>
+    <p class="lede placeholder">[Optional third line: quality notes — test coverage, review findings, defects since ship.]</p>
+    <div class="notes"><span class="t">~2.5 MIN — YOURS TO FILL IN</span> — Replace every orange bracket before presenting. Suggested beats: what the service is &rarr; how many specs/phases it took &rarr; the time comparison &rarr; one moment where a gate caught something &rarr; what the artifacts let you hand to reviewers. Concrete numbers here carry the whole talk.</div>
+  </section>
+
+  <!-- 12 · RIGHT-SIZING -->
+  <section class="slide">
+    <div class="eyebrow">Fitting it to the work</div>
+    <h2>Match the weight to the task</h2>
+    <div class="tablewrap">
+      <table>
+        <tr><th>Work</th><th>Process weight</th></tr>
+        <tr><td>Tiny fix / copy change</td><td>Short spec &rarr; quick AI critique &rarr; 2&ndash;4 step plan &rarr; implement. Minutes of overhead.</td></tr>
+        <tr><td>Medium feature</td><td>Clarification loop until the spec is ready, phased plan, gated implementation.</td></tr>
+        <tr><td>High-risk / multi-week</td><td>Full artifact set: numbered files, phase reviews, retros, checkpoint commits.</td></tr>
+      </table>
+    </div>
+    <p class="lede">At every weight the same three principles hold: <strong>clarify before coding, bound the scope, require evidence before "done."</strong></p>
+    <div class="notes"><span class="t">~1 MIN</span> — Defuses "this seems heavy." A one-line patch doesn't need a spec, and the process says so itself. The full version is for work that has to survive days, handoffs, and review.</div>
+  </section>
+
+  <!-- 13 · CLOSE -->
+  <section class="slide">
+    <div class="eyebrow">Takeaway</div>
+    <h1>Write it down first.<br>Approve it in steps.<br><span class="accent">Keep the human in charge.</span></h1>
+    <ul class="tight">
+      <li>Templates, a step-by-step guide, and a real worked example: <span class="mono">github.com/rstehwien/spec-driven-ai-dev</span></li>
+      <li>Works with Claude Code and Codex today — <code class="chip">./deploy.sh</code> installs it.</li>
+      <li>Easiest first try: one medium-sized feature, half-page spec, approve phase one.</li>
+    </ul>
+    <div class="notes"><span class="t">~1 MIN + Q&amp;A</span> — Land the three-line thesis and invite questions. If the room is quiet: "What's a feature on our backlog you'd trust an AI with under these gates — and one you wouldn't?"</div>
+  </section>
+
+  <div class="chrome">
+    <span id="counter">1 / 14</span>
+    <span class="navbtns">
+      <button id="prevbtn" aria-label="Previous slide">&larr;</button>
+      <button id="nextbtn" aria-label="Next slide">&rarr;</button>
+    </span>
+  </div>
+  <div class="progress" id="progress"></div>
+</div>
+
+<script>
+  (function () {
+    var deck = document.getElementById('deck');
+    var slides = deck.querySelectorAll('.slide');
+    var counter = document.getElementById('counter');
+    var progress = document.getElementById('progress');
+    var n = slides.length;
+    var i = 0;
+
+    var hash = parseInt(location.hash.slice(1), 10);
+    if (hash >= 1 && hash <= n) i = hash - 1;
+
+    function show(idx) {
+      i = Math.max(0, Math.min(n - 1, idx));
+      slides.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+      counter.textContent = (i + 1) + ' / ' + n;
+      progress.style.width = ((i + 1) / n * 100) + '%';
+      history.replaceState(null, '', '#' + (i + 1));
+    }
+
+    document.getElementById('nextbtn').addEventListener('click', function () { show(i + 1); });
+    document.getElementById('prevbtn').addEventListener('click', function () { show(i - 1); });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      switch (e.key) {
+        case 'ArrowRight': case 'ArrowDown': case ' ': case 'PageDown':
+          e.preventDefault(); show(i + 1); break;
+        case 'ArrowLeft': case 'ArrowUp': case 'Backspace': case 'PageUp':
+          e.preventDefault(); show(i - 1); break;
+        case 'Home': e.preventDefault(); show(0); break;
+        case 'End': e.preventDefault(); show(n - 1); break;
+        case 'n': case 'N':
+          deck.classList.toggle('shownotes'); break;
+        case 'f': case 'F':
+          if (document.fullscreenElement) { document.exitFullscreen(); }
+          else if (deck.requestFullscreen) { deck.requestFullscreen(); }
+          break;
+      }
+    });
+
+    show(i);
+  })();
+</script>
