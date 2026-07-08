@@ -5,12 +5,13 @@
 - [Abstract](#abstract)
 - [Quick Start](#quick-start)
 - [Why This Process Exists](#why-this-process-exists)
-- [Why “Human-Gated” Matters](#why-human-gated-matters)
-- [Why “Spec-Driven” Matters](#why-spec-driven-matters)
+- [Designed for Model and Context Handoffs](#designed-for-model-and-context-handoffs)
+- [What “Human-Gated” and “Spec-Driven” Each Mean](#what-human-gated-and-spec-driven-each-mean)
 - [Advantages of the Process](#advantages-of-the-process)
 - [Potential Limitations](#potential-limitations)
 - [Who This Is For](#who-this-is-for)
 - [Choosing the Right Weight](#choosing-the-right-weight)
+- [How This Compares to Other Spec-Driven Approaches](#how-this-compares-to-other-spec-driven-approaches)
 - [Process Flow](#process-flow)
 - [The Workflow in Detail](#the-workflow-in-detail)
 - [Recommended Artifact Conventions](#recommended-artifact-conventions)
@@ -51,7 +52,7 @@ If you want the shortest usable version of this workflow, do this:
 10. When a phase is approved, the AI updates `specs/NNN-<label>-phase-NN-review.md` and `specs/NNN-<label>-phase-NN-retro.md`, and the developer should strongly consider creating another checkpoint commit before beginning the next phase.
 11. After the last phase, the developer performs a final implementation review and can either request improvements or approve completion.
 
-The label is optional; the three-digit numeric prefix is what groups artifacts in one cycle. When this README shows a filename, it uses the labeled form for brevity.
+The label is optional; the three-digit numeric prefix is what groups artifacts in one cycle. When this README shows a filename, it uses the labeled form so the workstream is recognizable at a glance.
 
 In one sentence: the spec stays primary, the human stays in charge, and the AI only moves through explicit gates.
 
@@ -85,7 +86,7 @@ The single most important design choice in this workflow is that **project state
 - **Resume across sessions.** A new context — same model, fresh window — picks up the work by reading the spec and plan and checking the current checklist state. There is no need to reconstruct intent from previous conversation.
 - **Swap models between phases.** A model better suited to a specific phase (longer context, stronger reasoning, faster, cheaper) can take over because it has the same files to read.
 - **Recover from degraded long-context behavior.** When a long-running session starts hallucinating or losing track, a fresh context picks up where the artifacts say the work stands, not where the chat history suggests it does.
-- **Mix models — including local ones — across phases.** Because the spec and plan are durable files, you can route different phases to different models. A natural split is to use stronger models for spec drafting, clarification, and plan generation, and lighter or local models for bounded implementation phases or codebase reconnaissance where the quality ceiling is acceptable and the privacy, cost, or speed wins matter. This is a possibility the file-based artifacts keep open rather than a workflow the author runs every day; gentle-pi has the same property through Pi's per-agent model routing. The point is that durable artifacts make this kind of split practical regardless of which agent or hosting setup you use.
+- **Mix models — including local ones — across phases.** Because the spec and plan are durable files, you can route different phases to different models. A natural split is to use stronger models for spec drafting, clarification, and plan generation, and lighter or local models for bounded implementation phases or codebase reconnaissance where the quality ceiling is acceptable and the privacy, cost, or speed wins matter. This is a possibility the file-based artifacts keep open rather than a workflow the author runs every day; gentle-pi — one of the alternatives covered in [How This Compares to Other Spec-Driven Approaches](#how-this-compares-to-other-spec-driven-approaches) — has the same property through Pi's per-agent model routing. The point is that durable artifacts make this kind of split practical regardless of which agent or hosting setup you use.
 
 A schematic handoff:
 
@@ -500,7 +501,7 @@ specs/
   NNN+1-<label>-plan.md
 ```
 
-The label is optional. Drop it and the bare numeric prefix forms (`NNN-spec.md`, `NNN-questions-01.md`, etc.) are valid. This README uses the labeled form throughout for brevity; pick one style and stay consistent within a cycle.
+The label is optional. Drop it and the bare numeric prefix forms (`NNN-spec.md`, `NNN-questions-01.md`, etc.) are valid. This README uses the labeled form throughout; pick one style and stay consistent within a cycle.
 
 Recommended rules:
 
@@ -521,7 +522,7 @@ Recommended rules:
 
 One small example makes the artifact pattern easier to picture.
 
-Example `specs/001-auth-spec.md`:
+Example `specs/001-csv-export-spec.md`:
 
 ```md
 # Add CSV Export for Admin Reports
@@ -544,7 +545,7 @@ Allow admin users to export the current report view as CSV.
 - non-admin users do not see the export action
 ```
 
-Example `specs/001-auth-questions-01.md`:
+Example `specs/001-csv-export-questions-01.md`:
 
 ```md
 # Open Questions
@@ -558,7 +559,7 @@ Example `specs/001-auth-questions-01.md`:
 - Should export actions be logged for audit purposes?
 ```
 
-Example `specs/001-auth-plan.md`:
+Example `specs/001-csv-export-plan.md`:
 
 ```md
 ## Phase 01 - Access and request flow
@@ -587,6 +588,8 @@ Goal: Generate a CSV that matches the active filters and make it downloadable.
 - exported rows match the filtered view
 - large exports complete without blocking the request path
 ```
+
+This example is synthetic and trimmed for readability. For real, unedited artifacts from a shipped project — including a genuine clarification pass answered with `> Decision:` blockquotes — see [`examples/sprite-generator/`](./examples/sprite-generator/).
 
 ---
 
@@ -691,17 +694,17 @@ The skill is intentionally human-gated. After a gated stage, the AI should pause
 
 You can install this workflow in major agentic coding tools that support reusable skills or persistent repo instructions.
 
+On macOS, Linux, or another bash-compatible system, run [`deploy.sh`](./deploy.sh) from the repo root. It symlinks `skills/human-gated-spec-driven-ai-development/` into both `~/.claude/skills/` and `~/.codex/skills/`, so local Claude Code and Codex installs pick up the skill (and any updates to this repo) automatically.
+
+To install manually instead:
+
 - **Codex**
   Follow the official Codex docs for skills and repo instructions:
   - <https://developers.openai.com/codex/skills>
- 
-  This repo also includes [`deploy_codex.sh`](./deploy_codex.sh), which copies the skill to `~/.codex/skills/human-gated-spec-driven-ai-development` on bash-compatible systems.
 
-- **Claude Code**
-  Follow Anthropic's official skills documentation:
+- **Claude Code / claude.ai**
+  Follow Anthropic's official skills documentation; for the claude.ai skills UI, package `skills/human-gated-spec-driven-ai-development/` as a ZIP and upload it:
   - <https://support.claude.com/en/articles/12512180-use-skills-in-claude>
-
-  Keep the Claude Code setup high level: package `skills/human-gated-spec-driven-ai-development/` as a ZIP and add it through Claude's skills UI.
 
 ### Prompt Cookbook
 
