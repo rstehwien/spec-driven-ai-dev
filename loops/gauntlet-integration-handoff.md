@@ -11,12 +11,14 @@ Last updated: August 2026.
 ## Contents
 
 - [For a fresh agent: read this first](#for-a-fresh-agent-read-this-first)
-- [The three documents](#the-three-documents)
+- [The files](#the-files)
+- [Enforcement layers: skill, validator, harness](#enforcement-layers-skill-validator-harness)
 - [Settled decisions](#settled-decisions)
 - [Open decisions — blocked on the developer](#open-decisions--blocked-on-the-developer)
 - [Build order](#build-order)
 - [Tier 3 harvest](#tier-3-harvest)
 - [Tier 4 launch kit](#tier-4-launch-kit)
+- [If you build an orchestrator](#if-you-build-an-orchestrator)
 - [Work vs personal projects](#work-vs-personal-projects)
 - [Pre-run checklist](#pre-run-checklist)
 
@@ -46,17 +48,64 @@ the missing bar and controls cost, since only `reference` phases warrant a criti
 
 ---
 
-## The three documents
+## The files
 
 | File | What it is | When to read it |
 |---|---|---|
 | `gauntlet-integration-handoff.md` | This file. Index, decisions, action list, launch kit. | First, always. |
 | `pending-updates-gauntlet-review.md` | Review of the repo's `pending-updates.md`, plus eight repo-ready amendments (A1–A8) with paste-able text. | When implementing a specific amendment. |
 | `gauntlet-loop-with-spec-driven-dev.md` | Conceptual guide to the Gauntlet Loop and its integration. Templates, worked examples, failure modes. | For background, or to explain the approach to someone else. |
+| `validate.py` | Working validator for the mechanical conditions in A1, A3, A6, A8, A9. Stdlib only. Tested. | Drop into the repo root; run it now. |
 
-The amendments in A1–A8 are the actionable content. The guide is context.
+The amendments in A1–A11 are the actionable content. The guide is context. `validate.py` is the only
+executable artifact and the only one that enforces anything.
 
 ---
+
+## Enforcement layers: skill, validator, harness
+
+The recurring question — *when does a skill stay useful across Copilot, Claude, and Codex, and when
+does writing your own harness become better?* — has a third answer that sits between the two, and it is
+the one that fits almost everything in these amendments.
+
+| Layer | Handles | Portable | Effort |
+|---|---|---|---|
+| **Skill** (markdown) | judgment — spec review, rubric scoring, "is this actually a bar" | every host | already done |
+| **Validator** (script) | checkable conditions — gates, bar resolution, regression, promotion | every host, plus humans and CI | one file, exists |
+| **Harness** (orchestrator) | control — model routing, sequencing, parallelism, hard refusal to advance | host-specific | real project |
+
+**The decision criterion:** a skill is enough when what you want is the host's judgment. A validator is
+needed when a rule is true-or-false and you want it enforced identically everywhere. A harness is
+needed only for control the host will not give you.
+
+Applying it: nearly every enforcement rule in A1–A9 is a checkable condition, not a judgment. That is
+why the validator lands first in the build order — it converts the amendments from requests an agent
+may honor into checks that either pass or fail.
+
+**What actually needs a harness is thin.** One item: per-role model routing, which A10 argues you need
+for uncorrelated critics. Parallel workstreams at level 2 are optional by your own notes. Hard refusal
+to advance is covered in practice by the validator plus a human gate.
+
+### Prior art: what ChatDev's trajectory shows
+
+Worth recording, because it is the closest well-known project and the lesson is not the obvious one.
+
+ChatDev 1.0 was the virtual software company — CEO, CTO, programmer, reviewer in role-playing
+seminars. **As of January 2026 that is the legacy branch.** ChatDev 2.0 is a generic zero-code
+multi-agent orchestration platform: YAML workflow definitions, visual canvas, configurable nodes.
+Software development is one template among data visualization, 3D generation, and deep research. The
+arc across their own papers runs chain topology → DAG (MacNet) → RL-trained orchestrator (Puppeteer,
+NeurIPS 2025) → generic platform. That is a sustained retreat from fixed roles.
+
+Two conclusions:
+
+- **Roles were never a verification mechanism.** A "reviewer" agent that declares code good is exactly
+  the absence-of-objection exit condition A9 and A10 exist to fix. Do not adopt a role-based topology;
+  the abstraction here is the verification class, which is evidence-shaped rather than people-shaped.
+- **Their YAML defines a workflow graph; your markdown defines state.** A graph is imperative — run
+  this node, then that one. State is declarative — here is where we are, anyone can pick up. The
+  declarative form is what buys portability; the imperative form requires the framework. Their config
+  is also `API_KEY` + `BASE_URL`, which is the subscription problem, not a solution to it.
 
 ## Settled decisions
 
@@ -89,6 +138,27 @@ These are decided. Do not reopen without new evidence.
     symlinks the skill globally, so project-specific instructions would leak across projects.
 12. **`orchestration.md` is deferred** until Tier 3's retros provide evidence. Writing it now would
     calcify a design still being learned, which the repo's own notes argue against.
+13. **Every loop round re-verifies the whole bar and records the full pass/fail vector.** A dimension
+    that passed before and fails now is a **regression, which stops the loop** — not a finding to fix
+    next round. Plateau (vector unchanged for two rounds) also stops. Best round ≠ latest round, so
+    the loop must be able to return to the best one (A9).
+14. **A rubric is a closed set of dimensions.** A critic may not add or redefine one mid-loop. This is
+    what stops a loop from renewing its own mandate; changing the objective requires a human gate (A9).
+15. **Context isolation is not independence.** Same model family means shared blind spots. Three
+    levers in increasing strength: context isolation, model diversity, assertions. Never call a
+    same-family fresh-context critic "independent review" — and when a defect class escapes review
+    twice, write the assertion rather than strengthening the critic (A10).
+16. **Three enforcement layers, not two.** Skill for judgment, validator for checkable conditions,
+    harness only for control the host will not give you (A11).
+17. **The validator comes before the reference files.** It is what makes them enforceable rather than
+    advisory, and it works under every host including plain CI. `validate.py` exists and is tested.
+18. **No harness or Pi plugin yet.** The only genuinely harness-shaped need is per-role model routing
+    for A10. The falsifiable trigger for building one: Tier 4 shows same-family critics missing things
+    the Tier 3 harvest assertions would have caught. A plugin would also lock the enforcement layer to
+    one runtime, where a standalone script serves all of them.
+19. **The validator must never check judgment.** "Is this anchor concrete enough" is a human question.
+    A validator that scores quality becomes a critic with no context, and its pass would carry
+    authority it has not earned — the same failure as a reviewer with no bar.
 
 ---
 
@@ -120,28 +190,38 @@ specified. The answer is the spec's bar table plus a checkable four-condition ga
 Ordered so that the files paying off in both work and personal contexts come first, and the ones
 blocked on open decisions come last.
 
-- [ ] **1. `references/commit-discipline.md`** — lift directly from `pending-updates.md` §3. Branch
+- [ ] **1. `validate.py` at the repo root** — already written and tested; drop it in and run it
+      against the current `specs/`. On an un-migrated repo it reports info, not errors, so it is safe
+      to add before anything else. Add a `Validation` section to `README.md` (**A11**). Optionally
+      wire it into a pre-commit hook or CI. **Do this first:** it makes every amendment below
+      enforceable instead of advisory, and it costs nothing.
+- [ ] **2. `references/commit-discipline.md`** — lift directly from `pending-updates.md` §3. Branch
       check before first commit, `spec/NNN-<label>` / `chore/<slug>` / `spike/<slug>` naming, commit at
       phase boundaries only, one logical change per commit, vendored deps and bulk moves in their own
       commits, never force-push or rewrite published history, report branch and commits at end of run.
       **This content is already written; it just needs a home.**
-- [ ] **2. `references/verification-classes.md`** — three class definitions, the cannot-name-it
+- [ ] **3. `references/verification-classes.md`** — three class definitions, the cannot-name-it
       default, bar requirements per class, loop selection table. Source: review §2, A1, A3. Then add
-      the promotion/demotion rules from **A6**.
-- [ ] **3. `references/bars.md`** — fidelity ranking, naming conventions, the Godot-shaped guidance
+      the promotion/demotion rules from **A6** and the round contract, regression rule, and plateau
+      detection from **A9**. `validate.py` already enforces the mechanical half of all three.
+- [ ] **4. `references/bars.md`** — fidelity ranking, naming conventions, the Godot-shaped guidance
       and the two mandatory assertion families. Source: **A7**. Then copy A2's rubric template to
-      `templates/specs/NNN-rubric.md`.
-- [ ] **4. Spec and plan template changes** — bar table in the spec template and the specification
-      gate definition (**A8**); `Verification:` and `Bar:` per phase in the plan template (**A1**).
-- [ ] **5. `references/review-principles.md` amendments** — the honesty rule ("a review that names no
+      `templates/specs/NNN-rubric.md`, including the closed-dimension-set rule from **A9**.
+- [ ] **5. Spec and plan template changes** — bar table in the spec template, the specification gate
+      definition (**A8**), and an `## Invariants` section (**A9**); `Verification:` and `Bar:` per
+      phase in the plan template (**A1**).
+- [ ] **6. `references/review-principles.md` amendments** — the honesty rule ("a review that names no
       comparison and no executed behavior is a reading, not a review"), the withhold-rationale /
-      supply-orientation critic contract, the coverage audit, and the critic-classifies-severity rule.
-- [ ] **6. Split `SKILL.md`** into a thin router plus the load table (**A5**). Run `/doctor` after.
-- [ ] **7. `references/settings.md`** — blocked on open decisions 1 and 3.
-- [ ] **8. `references/orchestration.md`** — blocked on open decision 2 and on Tier 3 retro evidence.
-- [ ] **9. `README.md` dated amendment** (**A4**) and a `comparison.md` row on the two axes.
+      supply-orientation critic contract, the coverage audit, the critic-classifies-severity rule, and
+      the independence-levers correction from **A10**.
+- [ ] **7. Split `SKILL.md`** into a thin router plus the load table (**A5**). Run `/doctor` after.
+- [ ] **8. `references/settings.md`** — blocked on open decisions 1 and 3.
+- [ ] **9. `references/orchestration.md`** — blocked on open decision 2 and on Tier 3 retro evidence.
+- [ ] **10. `README.md` dated amendment** (**A4**) and a `comparison.md` row on the two axes.
 
-Items 1–4 are what Tier 4 needs. Items 5–6 are cheap and improve everything. Items 7–9 can wait.
+Items 1–5 are what Tier 4 needs. Items 6–7 are cheap and improve everything. Items 8–10 can wait.
+Items 1–6 also pay off at work and depend on none of the open decisions; 8–9 are personal-project
+only and blocked.
 
 ---
 
@@ -154,6 +234,13 @@ Two defects reached review on this codebase and were recorded in
 `specs/017b-tier2-review-findings.md`: a battle system that resolved entirely inside `_ready()`, and
 heal/revive items with no `use_item` code path anywhere. Both were invisible from reading specs and
 obvious within minutes of running the build.
+
+**Read those two escapes as a possible shared-blind-spot failure, not just a self-approval failure.**
+Per A10, a same-family critic brings the builder's blind spots to the artifact. "What should exist and
+does not" is exactly the question a same-family reviewer may fail to ask for the same reason the
+builder did — absent code produces no diff to notice. If that is what happened, no amount of critic
+independence would have caught it, and the assertions below are the only response that works. This
+makes the harvest the highest-value item on the whole list rather than merely a good idea.
 
 - [ ] Audit all completed Tier 3 cycles for the same two classes:
       **reachability** (authored id with no reachable handler) and
@@ -246,6 +333,20 @@ escalation are always allowed and should be reported.
 RUN THE GAME. Reading GDScript does not verify behavior. For any phase touching
 gameplay, drive the build through the scenario and observe it.
 
+EVERY ROUND RE-VERIFIES THE WHOLE BAR
+Check every rubric dimension, every acceptance criterion, and every invariant declared
+in the spec — not just the gap you are repairing. Record the full pass/fail vector for
+the round and its delta against the previous round.
+A dimension that passed before and fails now is a REGRESSION: stop, report the vector
+and the last clean round, do not attempt to fix it in another round.
+If the vector is unchanged across two consecutive rounds, that is a plateau: stop.
+Tag each round so the best-scoring round can be recovered. The best round is not
+necessarily the last one; report which it was.
+
+DO NOT ADD DIMENSIONS. A rubric is a closed set. You may not introduce a new dimension
+or redefine an existing one mid-run to justify further work. A newly noticed dimension
+is a finding for me and a candidate rubric amendment at the next gate.
+
 Once per spec, run a coverage audit: for each acceptance criterion, name the test that
 verifies it. A criterion with no verifying test is a finding even when the suite is
 green. Once per spec, not per round.
@@ -298,6 +399,52 @@ spec in the set.
 
 ---
 
+## If you build an orchestrator
+
+Deferred per settled decision 18. Recorded here so the design does not need rediscovering, and so the
+trigger is explicit rather than a matter of mood.
+
+**Build it only when:** Tier 4 shows same-family critics missing defects that the Tier 3 harvest
+assertions catch. That is the falsifiable trigger. The harvest may answer it before any code is written.
+
+**The key design property, and it is better than it first appears.** Because state lives in files, the
+orchestrator never parses agent output. It invokes a CLI, waits, runs `validate.py` against the files,
+and decides the next step. Standard streams are for logging, not for the protocol.
+
+That is a far more robust integration boundary than parsing stdout or a JSON stream, and it is exactly
+what ChatDev does not have — their node-to-node messages are in-framework objects. The spec artifacts
+are already a message-passing protocol with a schema and a validator. Being slower and dumber across
+process boundaries is what makes them work across hosts.
+
+    invoke <cli> with a stage prompt
+      -> agent reads specs/, writes specs/ and source
+      -> python validate.py specs/ --baseline specs/.class-baseline.json
+      -> orchestrator branches on exit code and findings
+      -> next stage, or stop and report
+
+**This is how A10's model diversity gets delivered.** Claude Code builds, Codex critiques, both read
+the same spec, plan, and bar. Nothing else in the toolkit produces uncorrelated review.
+
+**The Pi tension, stated plainly.** gentle-pi has per-agent model routing natively via
+`/gentle:models` — the exact feature you would otherwise build — but Pi wants API keys. CLI
+orchestration gets you subscriptions but you write the routing. That is the real trade, and it is not
+skill-versus-harness.
+
+**A hybrid resolves most of it:** builders via subscription CLI, critics via cheap API to a different
+family. Critics do strictly less work than builders — read the artifact, compare against the bar, name
+one gap — so the half you pay per-token for is the small half. You buy uncorrelated review for modest
+spend without routing the main workload through an API.
+
+- [ ] **Before building: check the terms for automated invocation of each CLI.** Claude Code ships a
+      non-interactive print mode intended for scripting, so scripted use is not inherently off-limits.
+      Copilot's CLI story differs and should be verified rather than assumed symmetric. Scripting your
+      own workflow on your own subscription is a different thing from building a service, but read the
+      specifics rather than inferring them.
+
+**Do not build a Pi plugin for the enforcement layer.** It would tie the checks to one runtime, where
+the same logic as a standalone script already serves Pi, Claude Code, Codex, Copilot, and CI. If you
+later want Pi-specific ergonomics, wrap the script; do not reimplement it inside a plugin.
+
 ## Work vs personal projects
 
 An earlier framing in this work stream collapsed two things that the repo's own notes keep separate.
@@ -319,6 +466,9 @@ So, available in a regulated or shared-repo context today:
 - the coverage audit
 - critic-classifies-severity
 - the review honesty rule
+- **`validate.py`** — it runs anywhere, enforces nothing that needs autonomy, and is arguably more
+  valuable in a regulated context, where "the gate conditions were mechanically verified" is a
+  stronger claim than "the agent said it followed the process"
 
 Blocked at work: `commits: ai-on-branch`, and multi-phase autonomy past the plan gate.
 
@@ -334,10 +484,18 @@ Before launching any autonomous run:
 - [ ] Every spec in the set has crossed the A8 specification gate — no open must-answer questions,
       every must-have criterion classed and barred, every `reference` bar present on disk, developer
       approved.
+- [ ] Every spec declares its **invariants**, and every invariant has a check (A9). An invariant
+      without a check is a wish.
+- [ ] Decide whether critics run on a different model family than builders, and record which
+      independence lever you actually used (A10). If the answer is "same family," say so in the retro
+      rather than describing the review as independent.
 - [ ] The manifest exists, lists the set explicitly, and states dependency order and layers.
 - [ ] Known contract conflicts are resolved or recorded as requiring human resolution.
 - [ ] The Tier 3 assertions are in the harness.
 - [ ] The working tree is clean and the branch is correct.
+- [ ] `python validate.py specs/ --strict` passes for every spec in the set.
+- [ ] A class baseline is written (`--write-baseline`) so promotion during the run is detectable
+      afterward.
 - [ ] **Diff the prompt against the current `SKILL.md` and delete anything already covered there
       rather than paraphrasing it.** Sixty lines of prompt alongside a skill covering the same ground
       is a conflicting-instruction surface — the documented failure mode is overlapping directives

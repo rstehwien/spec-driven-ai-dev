@@ -13,7 +13,7 @@ Structure:
 6. [Open questions the Shumer material actually settles](#6-open-questions-the-shumer-material-actually-settles)
 7. [Corrections to the companion guide](#7-corrections-to-the-companion-guide)
 8. [Suggested amendments to §8's file list](#8-suggested-amendments-to-8s-file-list)
-9. [Eight amendments in repo-ready form](#9-eight-amendments-in-repo-ready-form)
+9. [Eleven amendments in repo-ready form](#9-eleven-amendments-in-repo-ready-form)
    - [The fidelity argument they rest on](#the-fidelity-argument-they-rest-on)
    - [A1 — `generate-plan` emits the bar](#a1--generate-plan-emits-the-bar)
    - [A2 — rubrics as a first-class bar type](#a2--rubrics-as-a-first-class-bar-type)
@@ -23,6 +23,9 @@ Structure:
    - [A6 — promotion and demotion rules](#a6--promotion-and-demotion-rules)
    - [A7 — `bars.md` for a Godot project](#a7--barsmd-for-a-godot-project)
    - [A8 — bars move to specification](#a8--bars-move-to-specification)
+   - [A9 — invariants, preservation proof, and plateau detection](#a9--invariants-preservation-proof-and-plateau-detection)
+   - [A10 — critic independence has limits](#a10--critic-independence-has-limits)
+   - [A11 — extract checkable conditions into a validator](#a11--extract-checkable-conditions-into-a-validator)
 
 ---
 
@@ -447,7 +450,7 @@ duplicates per-spec state.
 
 ---
 
-## 9. Eight amendments in repo-ready form
+## 9. Eleven amendments in repo-ready form
 
 Paste-able text for each change, with its target file. Placeholders are in `<angle brackets>`.
 Cross-references written as `[...](#)` need real anchors once the target files exist.
@@ -456,6 +459,14 @@ A1–A5 came first; A6–A8 were added after working through what a Godot projec
 execution mode actually need. **A8 supersedes part of A1** — bars are authored during specification
 rather than emitted by `generate-plan`. A1's field definitions and bar-quality rules all stand; only
 the timing changes. Read A1 for the mechanics and A8 for when it happens.
+
+**A9 and A10 come from external criticism of the Gauntlet Loop, and they close genuine holes** rather
+than restating things already covered. The critique's full list was: moving objective, critics
+inventing deficiencies, correlated models masquerading as independent review, no fixed authority
+boundary, no stable invariants, no cost ceiling, and no requirement to prove each iteration preserved
+what already worked. Five of those were already addressed. Two were not: **nothing verified that a
+round preserved earlier gains** (A9), and **context isolation was being treated as independence when
+it is not** (A10). Both are worth treating as corrections rather than additions.
 
 ### The fidelity argument they rest on
 
@@ -936,6 +947,211 @@ that gate is consistent rather than novel.
 **Interaction with incremental mode:** the plan gate still exists there, so this is belt-and-braces
 rather than the only check. Worth keeping anyway, because a bar written while thinking about the
 problem is usually better than one written while thinking about the plan.
+
+### A9 — invariants, preservation proof, and plateau detection
+
+**Targets:** `templates/specs/NNN-spec.md` (invariants section),
+`references/verification-classes.md` (the round contract), and the gauntlet log template.
+
+**The hole.** A loop where the critic names *the largest gap* each round and the builder fixes it has
+no pawl on the ratchet. Close gap A in round 1, then re-break A while closing gap B in round 2, and
+nothing notices — the log records the gap under repair, not the state of everything else. A rubric with
+eight dimensions checked one at a time is exactly this shape.
+
+Three additions fix it, and all three are cheap.
+
+```markdown
+### Invariants
+
+Acceptance criteria say what must **become** true. Invariants say what must **stay** true. They are
+different fields with different lifetimes: criteria belong to a phase, invariants belong to the spec
+and are inherited by every phase in it.
+
+Declare them in the spec:
+
+    ## Invariants
+    - <property that must hold before, during, and after every phase>
+    - <existing behavior no phase in this cycle may change>
+    - <data or contract that must remain compatible>
+
+Every invariant must be checkable. An invariant that cannot be verified is a wish; either give it a
+check or move it to constraints.
+
+### The round contract
+
+Every loop round must satisfy all of the following before it counts as a round:
+
+1. **Re-verify the whole bar, not just the dimension under repair.** Every rubric dimension, every
+   acceptance criterion, every invariant. Partial verification is what allows silent regression.
+2. **Record the full pass/fail vector**, not only the largest gap. The vector is the evidence; the
+   gap is the next action.
+3. **Compare the vector against the previous round.** Any dimension that passed before and fails now
+   is a **regression**.
+4. **A regression stops the loop.** It is not a finding to fix next round. A loop that regresses has
+   shown it does not understand the artifact well enough to keep changing it — report the vector, the
+   diff, and the round that was last clean.
+
+### Plateau detection
+
+Distinct from a recurring finding class, and both are needed:
+
+- **Recurring finding class** — the same *kind* of problem keeps appearing. Usually means the spec is
+  incomplete. Escalate.
+- **Plateau** — the pass/fail vector is unchanged across two consecutive rounds. Means the loop is no
+  longer making progress against this bar. Stop; further rounds are spending without moving.
+
+### Rollback inside the loop
+
+Because the best round and the latest round are not the same round, the loop must be able to return
+to the best one. Tag or commit each round on the working branch — round commits are cheap and
+squashable — and identify the best-scoring round by its vector, not by recency. When a loop stops on
+regression or budget, report which round was best and leave the tree there rather than at the last
+attempt.
+
+### The objective may not change mid-loop
+
+A rubric is a **closed set of dimensions.** A critic may not add a dimension during a loop, and may
+not redefine an existing one. A newly noticed dimension is a finding for the developer and a
+candidate amendment to the rubric at the next gate.
+
+This is the rule that prevents a loop from renewing its own mandate: without it, a critic can always
+discover another axis on which the reference wins, make that the new objective, and justify another
+round indefinitely. Changing the objective requires a human gate, always.
+```
+
+Gauntlet-log addition, replacing the per-round record in the log template in the companion guide
+(`gauntlet-loop-with-spec-driven-dev.md`, "New artifact: the gauntlet log"):
+
+```markdown
+### Round NN
+- **Builder change:** <what changed>
+- **Bar vector:** <dimension: pass/fail for EVERY dimension, not just the one repaired>
+- **Vector delta vs previous round:** <improved: … | regressed: … | unchanged>
+- **Invariants:** <all holding | which broke>
+- **Critic verdict:** reference wins / ours wins / tie
+- **Largest gap:** <one, specific>
+- **Next strategy:** <how the next round differs>
+```
+
+The `Vector delta` line is the whole point of the amendment. It is also what makes the log useful to a
+fresh context: a reader can see the trajectory rather than a sequence of unrelated repairs.
+
+### A10 — critic independence has limits
+
+**Targets:** `references/review-principles.md`, and the critic contract wherever it appears.
+
+**The correction.** Earlier guidance in these documents treats a fresh-context subagent as delivering
+independent review. It does not, and the gap matters. Context isolation removes the builder's *memory
+of its reasoning*. It does nothing about *shared priors*. A critic running on the same model as the
+builder brings the same training, the same habits, and the same blind spots to the same artifact.
+
+```markdown
+### Independence is a spectrum, not a property of subagents
+
+Three levers, in increasing strength. Reach for the strongest one available.
+
+| Lever | What it removes | Strength |
+|---|---|---|
+| Context isolation | the builder's rationalizations and stated conclusions | weak |
+| Model diversity — critic runs on a different model family | blind spots specific to one family | moderate |
+| Assertion — a named check replaces the judgment | model correlation entirely | strong |
+
+What each catches:
+
+- **Context isolation** catches *reasoning* failures: compromises the builder talked itself into,
+  conclusions unsupported by the artifact, work declared complete because the builder believes it is.
+- **It does not catch** failures the model family shares — the questions it does not think to ask.
+  Missing behavior is a strong candidate for this category: absent code produces no diff, so noticing
+  it requires asking "what should exist and does not," which a same-family critic may fail to ask for
+  the same reason the builder did.
+- **An assertion is uncorrelated with any model.** This is the deepest argument for pushing work down
+  the class ladder toward `automated`: an assertion is evidence, where a critic is a second opinion.
+
+Practical rules:
+
+- Never describe a same-family fresh-context critic as "independent review." Call it what it is —
+  context-isolated review — and record which lever was actually used.
+- Where a bar matters and a different model is available, route the critic to a different family. This
+  workflow makes that cheap: the spec, plan, and bar are durable files, so any agent can read them.
+- Where a defect class has escaped review before, do not respond by strengthening the critic. Write
+  the assertion. A repeat escape of a known class is evidence that judgment is the wrong tool for it.
+```
+
+The last rule is the one with teeth. It converts every review escape into a permanent harness
+improvement rather than a prompt adjustment, and it is the only response that compounds.
+
+### A11 — extract checkable conditions into a validator
+
+**Targets:** a new `validate.py` at the repo root, a `Validation` section in `README.md`, and a
+pointer from `SKILL.md`.
+
+**The observation.** Look back over A1, A3, A6, A8, and A9 and notice what kind of rules they are:
+
+| Rule | Nature |
+|---|---|
+| A8's specification gate — questions resolved, criteria classed and barred, bars on disk, approval recorded | four mechanical conditions |
+| A1's `Bar:` must be a resolvable path | filesystem check |
+| A9's invariants each have a check | text presence |
+| A9's round contract, regression, plateau | vector comparison |
+| A6's promotion authority | snapshot diff |
+| A3's no-gauntlet-on-`automated` | file existence |
+
+**None of these is a judgment.** Every one is true or false, and a skill can only *ask* an agent to
+self-report them — which is the same absence-of-evidence problem the whole review addresses, one level
+down. A script can verify them.
+
+That means there are three enforcement layers, not two, and the middle one is missing:
+
+| Layer | Handles | Portable across hosts |
+|---|---|---|
+| **Skill** (markdown) | judgment — spec review, rubric scoring, "is this actually a bar" | yes |
+| **Validator** (script) | checkable conditions — the table above | yes, plus humans and CI |
+| **Harness** (orchestrator) | control — model routing, sequencing, parallelism, refusing to advance | no |
+
+The validator is the highest-value layer per unit of effort, and it *strengthens* the portability
+thesis rather than fragmenting it: it is another durable artifact that travels with the specs and runs
+identically under Claude Code, Codex, Copilot, Pi, a terminal, or a pre-commit hook.
+
+```markdown
+### Validation
+
+`validate.py` checks the mechanical conditions of this workflow so that no agent has to be trusted to
+self-report them. It checks nothing that requires judgment.
+
+    python validate.py specs/                      # validate every cycle
+    python validate.py specs/ --cycle 006          # one cycle
+    python validate.py specs/ --json               # machine-readable
+    python validate.py specs/ --strict             # fail on unadopted structure
+
+Promotion detection needs a baseline, because a promotion is a change rather than a state:
+
+    python validate.py specs/ --write-baseline specs/.class-baseline.json
+    python validate.py specs/ --baseline specs/.class-baseline.json
+
+Write the baseline when a plan is approved; check against it after a run. A phase whose class moved
+toward less human involvement is an error (A6 forbids promotion during a run). A phase that moved
+toward more is reported and allowed.
+
+Severity has a specific meaning, so the tool stays usable during incremental adoption:
+
+- **error** — a structure is present but wrong. Fails the run.
+- **warn** — probably wrong, or unverifiable as written. Does not fail.
+- **info** — a structure is not yet adopted at all. Does not fail unless `--strict`.
+
+The distinction that matters: a plan where *no* phase declares `Verification:` is un-migrated and
+reports info. A plan where *some* phases declare it and others do not is partially migrated, which is
+a mistake, and reports an error.
+```
+
+Two design notes worth preserving:
+
+**Stdlib only, no dependencies.** A validator that needs an install step is a validator that does not
+run in some host, which defeats the point.
+
+**It must not check judgment, and the temptation will be to let it.** "Is this rubric anchor concrete
+enough" and "is this bar actually a bar" are human questions. A validator that starts scoring quality
+becomes a bad critic with none of a critic's context, and its passing verdict would then carry
+authority it has not earned — the same failure as a reviewer with no bar.
 
 ---
 

@@ -126,6 +126,14 @@ therefore excellent at explaining why each compromise was reasonable. You do not
 want independent. Fresh-context criticism is the single highest-leverage element of the pattern and
 the one most often skipped.
 
+With one important limit the original framing glosses over: **context isolation is not independence.**
+It removes the builder's memory of its reasoning; it does nothing about shared priors. A critic running
+on the same model as the builder brings the same training and the same blind spots to the same
+artifact, so it reliably catches rationalized compromises and unreliably catches the questions that
+family does not think to ask. Missing behavior is a likely member of that second category. See
+[A10 in the review document](#sources) for the three levers — context isolation, model diversity, and
+assertions — and why an assertion is evidence where a critic is only a second opinion.
+
 **5. The critic inspects the artifact, not a summary.** Pixels for visual work. The running product
 and the test output for software. The opened sources for research. The finished draft for prose. A
 polished progress report is not evidence that the underlying work is good — and models are very good
@@ -853,6 +861,20 @@ Note that the specific cost figures circulating for gauntlet runs are anecdotal 
 methodology. The concern does not need them — unbounded rounds times frontier pricing times subagent
 fan-out is a large bill on arithmetic alone, which is why budgets belong in settings regardless of what
 any particular run cost someone.
+
+**6. A ratchet with no pawl.** A loop that fixes "the largest gap" each round can close gap A in round
+one and re-break A while closing gap B in round two. Nothing notices, because the log records the gap
+under repair rather than the state of everything else. Verify the *whole* bar every round, record the
+full pass/fail vector, and treat any dimension that passed before and fails now as a **regression that
+stops the loop** — not a finding to fix next round. This is the most-cited weakness of the pattern in
+circulation and among the cheapest to fix. See A9 in the review document.
+
+**7. The loop renews its own mandate.** "Keep improving until the reference loses" is not a stop
+condition, because a critic can always discover a further axis on which the reference wins, make that
+the new objective, and justify another round. The antidote is that a rubric is a **closed set of
+dimensions**: a critic may not add or redefine one mid-loop. Newly noticed dimensions are findings for
+the developer and candidate amendments at the next gate. Changing the objective requires a human gate,
+always.
 
 ---
 
