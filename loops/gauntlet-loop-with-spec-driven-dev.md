@@ -23,6 +23,12 @@ and written against this repo's artifact conventions.
 > - **Example 3 substantially rewritten.** It recommended a gauntlet on what is really an `automated`
 >   phase, which the cost rule now forbids.
 > - Sourcing notes added for two widely repeated claims that do not survive checking.
+>
+> **Start with `gauntlet-integration-handoff.md`** if you are picking this up in a new session — it
+> carries the settled decisions, the open ones, and the build order. This guide is the reasoning
+> behind them. Note also that amendment A8 in the review document moves bar authoring from
+> `generate-plan` to specification, which supersedes the timing described in Part 3 below; the
+> mechanics are unchanged.
 
 ---
 
@@ -491,9 +497,9 @@ Existing stages change only slightly:
 
 | Stage | Change |
 |---|---|
-| `review-spec` | also classifies each acceptance criterion and flags any that cannot be evidenced at all |
+| `review-spec` | also classifies each acceptance criterion, names its bar, and flags any criterion that cannot be evidenced at all |
 | `generate-questions` / `fold-questions` | unchanged |
-| `generate-plan` | emits `Verification:` and `Bar:` per phase, and creates the bar artifact where it can |
+| `generate-plan` | assigns `Verification:` per phase and points each at a bar already present in the spec's bar table; marks `[!]` blocked if a needed bar is missing (see A8) |
 | `implement-next-phase` | runs the loop matching the phase's class |
 | `review-phase` | must run in a fresh context, not the implementation session; may cite the gauntlet log |
 | `final-review` | reads all gauntlet logs for cross-phase patterns in failed approaches |

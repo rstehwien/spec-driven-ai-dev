@@ -13,13 +13,16 @@ Structure:
 6. [Open questions the Shumer material actually settles](#6-open-questions-the-shumer-material-actually-settles)
 7. [Corrections to the companion guide](#7-corrections-to-the-companion-guide)
 8. [Suggested amendments to §8's file list](#8-suggested-amendments-to-8s-file-list)
-9. [Five amendments in repo-ready form](#9-five-amendments-in-repo-ready-form)
+9. [Eight amendments in repo-ready form](#9-eight-amendments-in-repo-ready-form)
    - [The fidelity argument they rest on](#the-fidelity-argument-they-rest-on)
    - [A1 — `generate-plan` emits the bar](#a1--generate-plan-emits-the-bar)
    - [A2 — rubrics as a first-class bar type](#a2--rubrics-as-a-first-class-bar-type)
    - [A3 — loop selection by verification class](#a3--loop-selection-by-verification-class)
    - [A4 — README amendment on bars and artifacts](#a4--readme-amendment-on-bars-and-artifacts)
    - [A5 — split `SKILL.md` before §8 grows it](#a5--split-skillmd-before-8-grows-it)
+   - [A6 — promotion and demotion rules](#a6--promotion-and-demotion-rules)
+   - [A7 — `bars.md` for a Godot project](#a7--barsmd-for-a-godot-project)
+   - [A8 — bars move to specification](#a8--bars-move-to-specification)
 
 ---
 
@@ -444,10 +447,15 @@ duplicates per-spec state.
 
 ---
 
-## 9. Five amendments in repo-ready form
+## 9. Eight amendments in repo-ready form
 
 Paste-able text for each change, with its target file. Placeholders are in `<angle brackets>`.
 Cross-references written as `[...](#)` need real anchors once the target files exist.
+
+A1–A5 came first; A6–A8 were added after working through what a Godot project and an autonomous
+execution mode actually need. **A8 supersedes part of A1** — bars are authored during specification
+rather than emitted by `generate-plan`. A1's field definitions and bar-quality rules all stand; only
+the timing changes. Read A1 for the mechanics and A8 for when it happens.
 
 ### The fidelity argument they rest on
 
@@ -716,6 +724,218 @@ PR, and final acceptance. Everything else moves.
 
 `/doctor` in Claude Code will audit the result and flag instructions that are no longer needed for
 current models, which is worth running once after the split rather than reasoning about it.
+
+### A6 — promotion and demotion rules
+
+**Target:** `references/verification-classes.md`.
+
+The three classes are only honest if movement between them is governed. Without rules, `human-eyes`
+drifts upward whenever a stop is inconvenient, which is the failure that makes the whole field
+decorative.
+
+The governing asymmetry: **promotion reduces human oversight, demotion increases it.** So they get
+different authority requirements.
+
+```markdown
+### Promotion and demotion
+
+Promotion means moving a phase toward less human involvement:
+
+    human-eyes  →  reference  →  automated
+
+#### Promotion requires a new artifact and a human gate
+
+A class may only be promoted because something now exists that did not exist before. Judgment
+improving, or the run being in a hurry, is never grounds.
+
+- `human-eyes` → `reference` — requires a rubric whose anchors are concrete enough that two
+  independent critics score the same artifact the same way. If scoring is not reproducible, the
+  phase is still `human-eyes` and the rubric is not yet a bar.
+- `reference` → `automated` — requires an assertion, gate, or measurement that settles what the
+  critic was judging. Name it. A comparison a human still has to read is not `automated`.
+
+**Promotion happens only at a human gate** — during specification, or at the plan gate in
+incremental mode. **An agent may never promote a phase during a run**, including when it has just
+written the assertion that would justify promotion. Write the assertion, record the proposal, let
+the next gate approve it.
+
+Record every promotion in the phase retro with the artifact that justified it. Promotions over
+time are the signal that the project's verification harness is maturing; if nothing ever gets
+promoted, the harness is static and every cycle pays full price.
+
+#### Demotion is always allowed, mid-run included
+
+Moving a phase toward more human involvement is conservative, needs no approval, and should be
+reported rather than requested:
+
+- `automated` → escalate — the named check passes but the result is wrong. This is a defect in
+  the check or the spec. Do not add a critic to compensate for a bad assertion.
+- `reference` → `human-eyes` — critics disagree on the same artifact, or the bar turns out not to
+  discriminate. Capture the evidence, stop, report.
+- Any class → `[!]` blocked — the bar does not exist, or a criterion turns out unverifiable as
+  written.
+
+#### The anti-gaming rule
+
+A phase's class may not be changed in a direction that avoids a stop the current class would have
+caused. If an agent finds itself reasoning toward a promotion that would let a run continue, that
+reasoning is the signal to stop and report instead.
+```
+
+That last rule is the one worth stating explicitly, because it is the exact shape of the temptation:
+an autonomous run reaching a `human-eyes` phase has a strong local incentive to decide the phase is
+really `reference` after all.
+
+### A7 — `bars.md` for a Godot project
+
+**Target:** `references/bars.md`, plus project-specific content in dragon-academy's `AGENTS.md`.
+
+An honest correction to the companion guide first: **its bar guidance is web-shaped.** HTML mockups
+are the recommended `reference` bar there, and they do not exist for a game project. Working out what
+does exist changes the shape of the class distribution substantially.
+
+```markdown
+### Choosing a bar
+
+A bar is the artifact or measurement a phase is judged against. It is not the acceptance criteria;
+those are inputs to it. See [Verification classes](#).
+
+Prefer the highest-fidelity bar available, because fidelity is what keeps the target still across
+rounds and fresh contexts:
+
+| Bar medium | Class | Why it holds still |
+|---|---|---|
+| Named test or measurement | `automated` | Executes. One reading. |
+| Reference implementation to port from | `reference` | Executes. Ambiguity resolves by inspection. |
+| Golden file / snapshot | `automated` if diffable, else `reference` | Byte- or state-identical every run. |
+| Rendered artifact (HTML mockup, etc.) | `reference` | Renders identically every round. |
+| Anchored rubric | `reference` | Concrete pass/fail anchors, so scores reproduce. |
+| Screenshot | `reference` | Stable, but silent on behavior and states. |
+| Prose acceptance criteria | none | Re-interpreted every round. Not a bar. |
+
+#### Bars for game and simulation projects
+
+There is no mockup tier, so the distribution differs from web work: more `automated` than you
+would expect, a thin `reference` tier dominated by rubrics, and a permanent `human-eyes`
+residue that should not be forced upward.
+
+`automated` — most verification belongs here:
+- data loading, schema validation, index generation, filtering
+- save/load round-trips
+- deterministic simulation: fixed seed and fixed input sequence produce an identical state trace
+- golden state snapshots, where the state is serializable and stable
+- **reachability**: every authored id has a handler reachable from the dispatch path
+- **runtime sequencing**: behavior fires on its triggering input, not at scene load
+
+`reference` — thin, and mostly rubrics:
+- an anchored rubric for things with nameable dimensions but no assertion
+- a prior working implementation to port or match
+- golden visual snapshots, only where rendering is deterministic; anything with physics jitter,
+  frame timing, or particle randomness is not a stable bar and belongs in `automated` behind a
+  tolerance, or in `human-eyes`
+
+`human-eyes` — and correctly permanent:
+- feel, pacing, responsiveness, difficulty balance, whether an animation reads well
+
+Some dimensions are never promotable. A rubric that claims to score "game feel" is a rubric with
+vague anchors wearing a costume. Leaving these `human-eyes` is the honest outcome, not a gap.
+
+#### The two mandatory assertion families
+
+Both correspond to defects that reached review on this codebase, so they are checked by default
+rather than when someone remembers:
+
+Reachability — catches authored content with no code path:
+
+    for each id in <authored dataset>.all_ids():
+        assert a registered handler exists for id
+        assert that handler is reachable from the dispatch path,
+               not merely defined somewhere in the tree
+
+Runtime sequencing — catches behavior resolving at load rather than on input:
+
+    drive the build to the scenario
+    assert the behavior has NOT occurred yet
+    deliver the triggering input
+    assert the behavior has now occurred
+
+The second family requires actually running the build. Reading source does not verify behavior;
+this is the check that reading cannot replace.
+```
+
+Two notes on scoping this file:
+
+**Harness specifics are yours to fill in.** Which test framework, how you run headless, how you
+simulate input — name the concrete tooling yourself rather than taking my guess at it. The rule "name
+the specific check" applies here too.
+
+**The build-verification instruction belongs in the project, not the skill.** `deploy.sh` symlinks the
+skill into `~/.claude/skills/`, so it is global across every project including work. "Run the Godot
+build and observe the scenario" in the skill would follow you into eligibility work where it is
+meaningless. The skill says *how to verify by class*; dragon-academy's `AGENTS.md` says *what running
+the thing means here*.
+
+### A8 — bars move to specification
+
+**Targets:** `templates/specs/NNN-spec.md`, `references/verification-classes.md`, and the
+specification gate definition in `SKILL.md`.
+
+This is the amendment that closes a hole A1 leaves open, and it also answers the §9 open question
+about what artifact marks a spec as sufficiently specified.
+
+**The hole.** A1 puts the bar-quality check at the plan gate: the developer asks "does every bar
+exist, and is it actually a bar?" But in `spec-autonomous`, **there is no plan gate** — the run
+generates the plan. So the agent classifies its own phases, chooses its own bars, and then judges
+itself against them. That is the §5 finding one level up: not the builder grading its own work, but
+the *planner setting its own bar*. The check disappears precisely when autonomy rises and it is
+needed most.
+
+**The fix.** Bars are authored during specification, by the human, at the gate that still exists.
+
+```markdown
+### Bars in the spec
+
+Every must-have acceptance criterion carries a bar before the spec is considered specified.
+
+| Criterion | Class | Bar | Exists |
+|---|---|---|---|
+| <criterion> | automated | <test path::test name> | yes |
+| <criterion> | reference | specs/NNN-<label>-rubric-<slug>.md | yes |
+| <criterion> | human-eyes | <what judgment, and who makes it> | n/a |
+
+Rules:
+
+- A criterion that can name neither a check nor an existing reference artifact is `human-eyes`.
+- A criterion that cannot be evidenced at all is **unsettleable**: it is a spec defect, it goes to
+  the questions artifact, and the spec is not specified until it is resolved or dropped.
+- `reference` bars must exist on disk. A bar that is planned but unwritten does not count.
+
+### The specification gate
+
+A spec is sufficiently specified when all of the following hold:
+
+1. No unresolved must-answer questions remain in its questions artifacts.
+2. Every must-have acceptance criterion has a class and a bar per the table above.
+3. Every `reference` bar named in that table exists on disk.
+4. The developer has approved it.
+
+This is a checkable condition, not a judgment. A resumed agent — or a portfolio coordinator —
+determines whether the gate has been crossed by checking it, and cannot infer specification from
+the absence of an unanswered questions file.
+```
+
+What `generate-plan` does instead of authoring bars: assign a class per phase, point each phase at a
+bar that already exists in the spec's table, and mark the phase `[!]` blocked if the bar it needs is
+missing. It composes bars; it does not invent them.
+
+**The cost is real and the trade is correct.** This front-loads more human work before an autonomous
+run begins — which is already the premise of both autonomy levels. Level 2 in particular asks you to
+take every spec through specification before any implementation starts; adding "and write its bars" to
+that gate is consistent rather than novel.
+
+**Interaction with incremental mode:** the plan gate still exists there, so this is belt-and-braces
+rather than the only check. Worth keeping anyway, because a bar written while thinking about the
+problem is usually better than one written while thinking about the plan.
 
 ---
 

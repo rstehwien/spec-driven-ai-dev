@@ -353,6 +353,7 @@ reduces latency without hiding correlated mistakes across specs.
 
 # Experimental example
 
+## Original Prompt
 The following prompt was given to Claude in an attempt at running 8 different specs 
 that had passed the question phase. The prompt isn't the best example of the
 guantlet loop.
@@ -371,5 +372,147 @@ sub-agent should review the implementation and when fully satisfied the the
 specification it should be comitted to git.  Iterate fixing critical items in the 
 review but less critical items can be documented and skipped.
 
-Keep looping until all of Tier 3 has been implemented according to the specifications.  Fan out subagents and ultracode.
+Keep looping until all of Tier 3 has been implemented according to the specifications.  
+Fan out subagents and ultracode.
 ```
+
+## Possible Improvement
+### Manifest
+Do not run this prompt
+```
+# Tier 4 Portfolio Manifest
+
+settings:
+  execution: portfolio-autonomous
+  commits: ai-on-branch
+  branch: tier4
+  loop-budget:
+    max-rounds-per-spec: 5
+    stop-on-recurring-finding-class: 3
+    stop-on-diff-growth-beyond-plan: <N> lines
+
+## Specification gate
+Every spec listed below has completed question, fold, and specification review and is
+approved as sufficiently specified. A spec not listed here is not in the set, and no
+spec lends implied approval to any other.
+
+| Spec | Specified on | Depends on | Shared contracts touched | Layer |
+|---|---|---|---|---|
+| 030-<label> | 2026-08-XX | — | <contract> | 1 |
+| 031-<label> | 2026-08-XX | 030 | <contract> | 2 |
+
+## Dependency layers
+Layer 1: 030, 032 — independent
+Layer 2: 031, 033 — depend on layer 1
+Integration review runs at each layer boundary.
+
+## Known contract conflicts
+<none | list requiring human resolution before the run>
+```
+### Prompt
+Do not run this prompt
+```
+Implement the Tier 4 portfolio on branch `tier4`, following
+/human-gated-spec-driven-ai-development.
+
+AUTHORITY AND ORDER
+specs/tier4-manifest.md is the authority for this run: which specs are in the set, their
+dependency order, and the effective settings. Work that order. Do not take order from
+docs/dev-checklist.md, and do not add a spec to the set because it looks ready.
+
+BEFORE PLANNING ANYTHING
+Read the Tier 3 retros and review-findings artifacts. Carry forward what escaped review
+there — do not rediscover it. Ground every plan in the repository state Tier 3 actually
+left behind, not in what its specs said it would leave.
+
+CALIBRATION STOP
+Complete the first spec in dependency order end to end, then STOP and report before
+starting the second. I am checking your phase classifications, your bars, and your
+critic evidence before you replicate them across the set. This stop is not optional and
+not a sign anything is wrong.
+
+PER-PHASE BAR
+Every phase carries:
+  Verification: automated | reference | human-eyes
+  Bar: <resolvable path — a named test, a reference artifact, or a rubric>
+"The test suite" is not a bar; a named test is. Prose acceptance criteria are inputs to
+a bar, never the bar itself. A phase that can name neither a check nor an existing
+reference artifact is human-eyes. If a phase needs a bar that does not exist, mark it
+[!] blocked and name the missing artifact — do not invent one mid-run. Never reclassify
+a phase later to avoid a stop.
+
+LOOPS BY CLASS
+  automated  — run the named check, fix, rerun. NO critic loop. If a check passes but
+               the result is wrong, that is a defect in the check or the spec:
+               escalate, do not add a critic to compensate.
+  reference  — fresh-context critic. Give it the spec, the acceptance criteria, the bar
+               artifact, and how to run the build. Do NOT give it your reasoning, your
+               diff narrative, or your view that the work is done. It runs or renders
+               the real thing, compares against the bar, says which it prefers, and
+               names ONE largest gap with evidence.
+  human-eyes — capture evidence, STOP, report. Produce no verdict.
+
+RUN THE GAME. Reading GDScript does not verify behavior. For any phase touching
+gameplay, drive the build through the scenario and observe it.
+
+Once per spec, run a coverage audit: for each acceptance criterion, name the test that
+verifies it. A criterion with no verifying test is a finding even when the suite is
+green. Once, not per round — repeating it adds no information.
+
+THE CRITIC CLASSIFIES SEVERITY, NOT THE IMPLEMENTER. Deferred findings go to
+specs/NNN-<label>-review-findings.md for me. The implementer fixes must-fix items only
+and may never downgrade a finding to move on.
+
+INTEGRATION
+At each dependency-layer boundary in the manifest, run one fresh agent over the
+combined result of that layer before starting the next. Not after every spec, and not
+only at the end.
+
+COMMITS
+Branch `tier4` only, never main. Verify the branch before the first commit. Phase
+boundaries only, one logical change per commit, leaving the build green and the plan
+checklist accurate. No push, merge, PR, force-push, or history rewrite.
+
+STOP AND REPORT ON: a human-eyes phase; a blocked phase [!] — do not skip ahead or
+re-scope around it; two specs needing incompatible changes to the same contract; failed
+layer integration; the same finding class recurring across 3 rounds, which means the
+spec is incomplete rather than the implementation deficient; 5 rounds on one spec; diff
+growth well beyond plan expectation; any criterion that turns out unverifiable as
+written.
+
+NEVER SELF-APPROVE. Final review across the set comes to me. "The reviewer found
+nothing" is evidence for advancing the queue, never permission to declare the set
+complete.
+
+AT THE END: per-spec status; comparison evidence for every reference phase; all deferred
+findings; commits and branch state; dependency decisions you made; and which phases you
+classified automated or reference that you now believe should have been human-eyes.
+
+Use ultracode.
+```
+### Collapsed
+Once `settings.md`, `verification-classes.md`, `bars.md`, `commit-discipline.md`,
+and `orchestration.md ` exist and `SKILL.md` routes to them, nearly everything above is 
+a standing property of the workflow rather than a fact about this run:
+
+```
+Implement the Tier 4 portfolio per /human-gated-spec-driven-ai-development.
+specs/tier4-manifest.md is the authority for the set, order, and settings.
+
+Read the Tier 3 retros and findings before planning — carry forward what escaped
+review there.
+
+Complete the first spec end to end, then stop and report so I can check your
+classifications and bars before you replicate them across the set.
+
+Use ultracode.
+```
+
+That's about the length of your original, and it's the concrete demonstration of the 
+minimalism point: prompts get short again when the boundaries live in durable files. 
+The long version above is what you pay in prompt tokens for settings that have no home 
+yet — which is the chat-resident configuration your §6 objects to.
+
+The calibration stop is the one line I'd keep even after everything else moves into the 
+skill. It costs one gate and it's the cheapest protection against a systematic 
+misclassification getting replicated eight times.
