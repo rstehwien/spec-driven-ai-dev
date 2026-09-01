@@ -18,8 +18,13 @@ deploy_skill() {
   local target_dir="${skills_dir}/${SKILL_NAME}"
 
   if [[ ! -d "${skills_dir}" ]]; then
-    echo "Skipping ${tool_name}: skills directory not found at ${skills_dir}"
-    return 0
+    read -r -p "Skills directory not found at ${skills_dir}. Create it? [y/N] " reply
+    if [[ "${reply}" =~ ^[Yy]$ ]]; then
+      mkdir -p "${skills_dir}"
+    else
+      echo "Skipping ${tool_name}: skills directory not found at ${skills_dir}"
+      return 0
+    fi
   fi
 
   rm -rf "${target_dir}"
