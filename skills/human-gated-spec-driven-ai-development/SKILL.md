@@ -129,6 +129,8 @@ If the user explicitly says `lightweight mode` or clearly asks for a lighter ver
 - After implementation, verify the project compiles and the full project test suite passes before marking a phase complete.
 - If compilation or tests fail, record the blocked state honestly in the plan and review artifacts.
 - Keep questions artifacts such as `NNN-questions-YY.md` or `NNN-<label>-questions-YY.md` as a numbered clarification history. Do not delete prior question sets after folding them into the spec.
+- Whenever you write a question for the developer, in a questions artifact or in a spec review, put its proposed fallback inline under that question rather than in a trailing summary section. A fallback that is separated from its question forces the developer to re-derive which question it belongs to, which is exactly the review cost this workflow exists to avoid.
+- Treat a fallback as a recommendation the developer must accept or reject explicitly. Every question requires its own `> Decision:`, including `> Decision: use the fallback` when the recommendation is already right. Never fold a fallback into the spec because the developer stayed silent — an unanswered question is unresolved, and silence is not a gate the AI may pass on its own.
 - In questions artifacts, treat blockquoted labels such as `> Decision:` and `> Question:` as developer feedback. Fold `Decision` content into the spec when it resolves an issue, and preserve or refine `Question` content as unresolved clarification.
 - Treat `fold-questions` as the clarification-loop stage: after answers are added, update the spec as far as possible and then either keep the resolved questions file as history or produce the next numbered set of unresolved questions.
 - Keep handoff notes in the plan, review, and retro artifacts rather than creating a separate handoff file.
@@ -170,7 +172,6 @@ Goal: [one concise sentence]
 
 ### Notes
 - risks, assumptions, or dependencies
-```
 ```
 
 For implementation stages, update checklist items as work progresses and leave the plan current at the end of the run so the developer can see what is in progress, what was completed, and what is blocked.
@@ -221,7 +222,13 @@ Create `specs/NNN-questions-YY.md` or `specs/NNN-<label>-questions-YY.md` using 
 
 Only include questions that remain unresolved after checking the relevant codebase and docs.
 
-Group questions by topic. Distinguish must-answer questions from useful clarifications. Include fallback assumptions that would apply if a question remains unanswered.
+Group questions by topic. Distinguish must-answer questions from useful clarifications.
+
+Attach a proposed fallback to every question inline, as a sub-bullet under that question, stating the assumption you recommend if the developer has no preference and what it would cost to change later. Never collect fallbacks or assumptions into a trailing section at the end of the artifact, and never write a single fallback that answers several questions at once. Each question must be decidable in place, without the reader scrolling to another section to find out what you are proposing.
+
+A fallback is a recommendation awaiting a decision, not a default that applies on its own. Ask the developer for an explicit `> Decision:` on every question, and tell them that accepting a recommendation is itself a decision to record (`> Decision: use the fallback`). Never present silence as agreement.
+
+Number questions continuously across every topic and section so each fallback is unambiguously tied to one question.
 
 Before each topic, briefly note the files checked when that context materially reduced or eliminated uncertainty.
 
@@ -234,6 +241,8 @@ Consult `references/stage-templates.md` for the template.
 ### `fold-questions`
 
 Read the answered `specs/NNN-questions-YY.md` or `specs/NNN-<label>-questions-YY.md` and fold the answers into the spec. Remove ambiguity where possible. Preserve intent.
+
+Fold only what the developer actually decided. A question carrying a `> Decision:` is resolved, including one that says to use the fallback. A question left blank is unresolved even though a fallback is printed under it, so do not fold that fallback into the spec and do not treat it as settled. Carry every undecided question into the next numbered questions artifact instead, and say plainly in your summary which questions came back because they were never decided.
 
 Then decide whether clarification is complete:
 

@@ -14,6 +14,9 @@
 > ```
 >
 > `Decision` content gets folded into the spec. `Question` content stays as unresolved clarification.
+> Every question needs an explicit `> Decision:`. If the proposed fallback is what you want, write
+> `> Decision: use the fallback` — accepting it is still a decision. A question left blank is
+> unresolved, not agreed, and its fallback is never folded in on its own.
 > Delete this blockquote before answering.
 
 ## Context From Repo
@@ -23,17 +26,26 @@
 
 ## Must Answer
 
-- [question that blocks planning]
-- [another blocking question]
+### Topic: [topic]
+
+1. [question that blocks planning]
+   - Proposed fallback: [assumption recommended if you have no preference]
+   - Cost if wrong: [what would have to change later]
+
+2. [another blocking question]
+   - Proposed fallback: [assumption]
+   - Cost if wrong: [what would have to change later]
 
 ## Useful Clarifications
 
-- [question that improves the plan but is not blocking]
-- [another nice-to-have clarification]
+### Topic: [topic]
 
-## Fallback Assumptions
+3. [question that improves the plan but is not blocking]
+   - Proposed fallback: [assumption]
+   - Cost if wrong: [what would have to change later]
 
-If any of the above remain unanswered, the spec will assume:
-
-- [assumption that would apply if the corresponding question is not answered]
-- [another fallback assumption]
+Every question carries its own proposed fallback inline. Do not add a trailing
+section collecting fallbacks or assumptions, and do not write one fallback
+covering several questions. Number questions continuously across all topics.
+A fallback is a recommendation awaiting a decision, not a default that applies
+by itself.

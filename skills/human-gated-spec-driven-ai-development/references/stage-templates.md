@@ -15,12 +15,19 @@ Use this structure when the user asks for a spec review:
 - likely implementation traps
 
 ## Clarifying Questions
-- must-answer
+- must-answer question
+  - Proposed fallback: the assumption recommended if the developer has no preference
+  - Cost if wrong: what would have to change later
 - useful clarification
+  - Proposed fallback: ...
+  - Cost if wrong: ...
 
 ## Assumptions at Risk
+Only assumptions that are not attached to a specific question above. If an
+assumption is the fallback for a question, it belongs inline with that question
+and must not be repeated here.
+
 - assumption 1
-- assumption 2
 
 ## Recommended Spec Changes
 - change 1
@@ -35,6 +42,10 @@ Use this structure when the user asks for a spec review:
 
 Create `specs/NNN-questions-01.md` or the next numbered `specs/NNN-questions-YY.md` file with this structure. If the related spec uses a label (for example `001-auth-spec.md`), include the same label in the questions filename (`specs/001-auth-questions-01.md`). The label must stay consistent across the entire artifact set.
 
+Every question carries its own proposed fallback inline, as a sub-bullet directly under that question. Do not add a trailing section that collects fallbacks or assumptions, and do not write one fallback that covers several questions at once — the reader must be able to decide each question without scrolling elsewhere. Number questions continuously across all topics and sections so a fallback is never ambiguous about which question it belongs to.
+
+A fallback is a recommendation awaiting a decision, never a default that applies on its own. Every question requires an explicit `> Decision:` from the developer, and accepting the recommendation is itself a decision they have to write down (`> Decision: use the fallback`). An unanswered question stays unresolved.
+
 ```md
 # Questions for Spec 001 (or 001-auth)
 
@@ -43,30 +54,46 @@ Create `specs/NNN-questions-01.md` or the next numbered `specs/NNN-questions-YY.
 - file or directory: constraint or behavior confirmed
 
 ## Must Answer
+
 ### Topic: [topic]
+
 1. Question
+   - Proposed fallback: the specific assumption recommended if you have no preference
+   - Cost if wrong: what would have to change later if the fallback is not what you wanted
+
 2. Question
+   - Proposed fallback: ...
+   - Cost if wrong: ...
 
 ## Useful Clarifications
+
 ### Topic: [topic]
-1. Question
-2. Question
+
+3. Question
+   - Proposed fallback: ...
+   - Cost if wrong: ...
 
 ## How to Answer
-Use blockquoted labels for comments and feedback:
+
+Every question needs an explicit decision, placed directly under the question it answers:
 
 > Decision:
 > The decision made was...
 
+If the proposed fallback is what you want, say so — that is still a decision:
+
+> Decision:
+> Use the fallback.
+
+If you are not ready to decide, raise the open point instead and it will come back in the next questions artifact:
+
 > Question:
 > I have a question...
 
-## Fallback Assumptions if Unanswered
-- assumption 1
-- assumption 2
+A question left blank is unresolved, not agreed. The fallback is a recommendation and is never folded into the spec without a decision accepting it.
 
 ## User gate
-- answer this file directly, preferably using `> Decision:` for settled answers and `> Question:` for follow-up uncertainty
+- answer every question in this file with a `> Decision:`, using `> Decision: use the fallback` where the recommendation is already what you want, and `> Question:` where you need to push back before deciding
 - when you are ready, run `fold-questions` rather than skipping to planning
 - example prompt: `Use the human-gated-spec-driven-ai-development skill to fold-questions from 001-questions-01.md into 001-spec.md` (or `001-auth-questions-01.md` into `001-auth-spec.md` when a label is used)
 ```
