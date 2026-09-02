@@ -13,3 +13,9 @@ Answered questions, no prompt
 Use the human-gated-spec-driven-ai-development skill to fold-questions from 001-gridsweep-questions-01.md into 001-gridsweep-spec.md
 ```
 Folded answers into spec.
+
+#4 
+```
+Use the human-gated-spec-driven-ai-development skill to generate-plan for 001-gridsweep-spec.md
+```
+001-gridsweep-plan.md.  I reviewed.
