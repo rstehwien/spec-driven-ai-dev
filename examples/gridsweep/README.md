@@ -41,7 +41,7 @@ suite still exits zero.
 1. [`specs/001-gridsweep-spec.md`](specs/001-gridsweep-spec.md) — the spec.
    **This is the folded version, not the one the run started from.** The
    starting spec was 49 lines and never said how you win; the copy preserved for
-   the demo is [`../../presentations/001-gridsweep-spec.md`](../../presentations/001-gridsweep-spec.md).
+   the demo is [`../../presentations/001-gridsweep/001-gridsweep-spec.md`](../../presentations/001-gridsweep/001-gridsweep-spec.md).
 2. [`specs/001-gridsweep-questions-01.md`](specs/001-gridsweep-questions-01.md)
    — fifteen numbered questions across five must-answer topics, each with why it
    matters and a proposed fallback, answered inline as `> Decision:` blocks in
@@ -74,6 +74,12 @@ stages. The git history in this repo *is* the process record: `git log --oneline
 Nothing here is synthesized after the fact. The questions are the ones the agent
 actually asked, the answers are the ones actually given, and the code is what
 actually came out.
+
+Nobody recorded the original session. The nearest thing to a recording is
+[`../../presentations/001-gridsweep/001-gridsweep-replay.html`](../../presentations/001-gridsweep/001-gridsweep-replay.html)
+— a page that replays all fourteen commits in order and stops after each one, so
+you can read that commit's real diff, play the game as it stood at that commit,
+or open the commit on GitHub. It is honest about which parts are reconstructed.
 
 ## Why there is no `package.json`
 

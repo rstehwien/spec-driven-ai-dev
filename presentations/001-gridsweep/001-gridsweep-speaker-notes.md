@@ -14,10 +14,22 @@ Budget 30 minutes.
 The whole cycle has already been run once, and the result — spec, questions,
 plan, five phases, final review, two improvement passes, a retro, and every
 prompt that produced them — is committed at
-[`examples/gridsweep/`](../examples/gridsweep/). Read
-[its README](../examples/gridsweep/README.md) before you present. It tells you
+[`examples/gridsweep/`](../../examples/gridsweep/). Read
+[its README](../../examples/gridsweep/README.md) before you present. It tells you
 what the agent actually asks, what it gets right without asking, and where the
 run went long.
+
+That same run is also replayable as a page: open
+[`001-gridsweep-replay.html`](001-gridsweep-replay.html) next to these notes. It
+plays each of the fourteen turns — prompt, agent, files changed, what the game
+looked like — and then **stops**, so you can read the real diff, play the actual
+game as it stood at that commit, or open the commit on GitHub before moving on.
+Use it as a warm-up before the live demo, or as the fallback if the live run
+stalls; **Auto-advance** turns it back into a hands-off video. It carries its own
+per-turn presenter notes under `N`, and it is labelled on screen as a
+reconstruction, which is what it is: the prompts, commits, diffs and screenshots
+are real, the pacing and the tool lines are not. See
+[its README](README.md) — the page needs the `replay/` folder next to it.
 
 ---
 
@@ -29,8 +41,8 @@ The starting spec — the 49-line version, before any question was folded into i
 — is right next to these notes:
 
 ```
-presentations/001-gridsweep-spec.md              <- copy this
-presentations/001-gridsweep-speaker-notes.md     <- this file, keep it out
+presentations/001-gridsweep/001-gridsweep-spec.md           <- copy this
+presentations/001-gridsweep/001-gridsweep-speaker-notes.md  <- this file, keep it out
 ```
 
 **Do not use `examples/gridsweep/specs/001-gridsweep-spec.md`.** That one is the
@@ -44,7 +56,7 @@ Copy the spec into a throwaway workspace. Run this from the root of
 
 ```sh
 mkdir -p ~/gridsweep-demo/specs
-cp presentations/001-gridsweep-spec.md ~/gridsweep-demo/specs/
+cp presentations/001-gridsweep/001-gridsweep-spec.md ~/gridsweep-demo/specs/
 cd ~/gridsweep-demo
 git init
 git add -A && git commit -m "Gridsweep spec"
@@ -300,7 +312,7 @@ The retro's verdict is worth quoting: *"the artifact ships with no build step"*
 is a real delivery constraint that held perfectly; *"therefore the project has no
 dev dependencies"* does not follow, and nobody noticed the two were separable
 because they arrived in the same bullet of the same spec section. Full argument:
-[Was the no-`package.json` approach right?](../examples/gridsweep/specs/001-gridsweep-retro.md#was-the-no-packagejson-approach-right)
+[Was the no-`package.json` approach right?](../../examples/gridsweep/specs/001-gridsweep-retro.md#was-the-no-packagejson-approach-right)
 
 ---
 
@@ -312,7 +324,7 @@ numbered files into `specs/`, and stops at each gate, so you don't hand-roll
 "don't write code" instructions into every prompt. Agent mode, not Ask mode.
 
 Every prompt below is the one actually used, verbatim, in
-[`examples/gridsweep/prompts.md`](../examples/gridsweep/prompts.md) — with the
+[`examples/gridsweep/prompts.md`](../../examples/gridsweep/prompts.md) — with the
 commit each one produced.
 
 ### Answer live, then fold in
@@ -445,7 +457,7 @@ player who cannot play at all without being told the bindings.
 > for — and it's why they aren't a formality.
 
 Full write-up:
-[What the process missed](../examples/gridsweep/specs/001-gridsweep-retro.md#what-the-process-missed).
+[What the process missed](../../examples/gridsweep/specs/001-gridsweep-retro.md#what-the-process-missed).
 
 ---
 
@@ -535,7 +547,7 @@ On the laptop you'll actually present from:
 - [ ] `human-gated-spec-driven-ai-development` skill installed globally (via
       `deploy.sh`) and visible to Copilot in the demo workspace
 - [ ] Demo workspace exists outside `spec-driven-ai-dev`, holding only
-      `presentations/001-gridsweep-spec.md` copied to `specs/`, committed
+      `presentations/001-gridsweep/001-gridsweep-spec.md` copied to `specs/`, committed
 - [ ] You copied the **presentations** spec, not the folded one in
       `examples/gridsweep/specs/`
 - [ ] These notes are **not** in that workspace, and neither is anything else
@@ -544,7 +556,11 @@ On the laptop you'll actually present from:
 - [ ] `node --version` works in the VS Code terminal
 - [ ] Terminal tool pre-approved for `node`
 - [ ] Projector mirrors the editor, not your notes
-- [ ] Read [`examples/gridsweep/README.md`](../examples/gridsweep/README.md) and
+- [ ] Read [`examples/gridsweep/README.md`](../../examples/gridsweep/README.md) and
       skimmed the retro
 - [ ] Ran the whole thing once, start to finish, and know which questions the
       agent actually asks and roughly how long each phase takes
+- [ ] `001-gridsweep-replay.html` opens and plays, with its `replay/` folder
+      alongside it, in case the live run stalls and you need the fallback
+- [ ] In the replay, **Play the game** on turn 08 actually responds to clicks on
+      the machine you are presenting from

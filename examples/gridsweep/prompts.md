@@ -28,7 +28,7 @@ spec; each commit was then copied here. See [README.md](README.md) for why.
 ## 0 · The starting spec — `e32e783`
 
 No prompt. The cycle started from a hand-written 49-line spec, preserved at
-[`../../presentations/001-gridsweep-spec.md`](../../presentations/001-gridsweep-spec.md).
+[`../../presentations/001-gridsweep/001-gridsweep-spec.md`](../../presentations/001-gridsweep/001-gridsweep-spec.md).
 It never says how you win.
 
 ## 1 · Review spec — `3087d07`
