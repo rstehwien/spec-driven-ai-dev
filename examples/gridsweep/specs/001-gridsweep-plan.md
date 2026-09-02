@@ -679,3 +679,17 @@ the spec end to end.
   `Use the human-gated-spec-driven-ai-development skill to review-phase for 001-gridsweep-plan.md`
 - Or, since this was the last phase:
   `Use the human-gated-spec-driven-ai-development skill to final-review for 001-gridsweep-plan.md`
+
+## Final review
+
+- `final-review` run 2026-09-01. Recorded in
+  [001-gridsweep-final-review.md](001-gridsweep-final-review.md).
+- Recommendation: **go**. No must-fix. `node --test` re-run at review time:
+  `tests 42 / pass 42 / fail 0`.
+- Two items worth a bounded cleanup pass before calling the work finished: the
+  dead `GridsweepUI` global in `ui.js`, and the source-grep tests that are
+  coupled to formatting and identifier names rather than behaviour.
+- One decision still open for the developer: whether acceptance criterion 6
+  ("further input has no effect" after the game ends) is meant to cover cursor
+  movement, which currently stays live. The review recommends keeping the
+  behaviour and amending the spec sentence.
