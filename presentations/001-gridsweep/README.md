@@ -30,9 +30,27 @@ in, the agent working, the files changing, what the game looked like — and the
 - **Commit on GitHub** — opens `github.com/rstehwien/spec-driven-ai-dev` at that
   commit in a new tab.
 
-Playback is about three minutes if you never stop; realistically it is however
-long the room wants to spend. **Auto-advance** in the title bar turns it back
-into a hands-off video for an unattended screen.
+The panel on the right carries what the diff cannot: the reasoning, quoted from
+the artifacts. The plan's own flagged deviations, the exact `TypeError` that made
+Phase 02 red, the review's executive summary, the developer's `> Decision:`
+triage, the mutation table, the retro's open items. Where the game is what
+changed, it shows the game — six real frames of Phase 04 being played, three of a
+loss. It does not restate what **What changed** already shows.
+
+Colour carries meaning throughout. **Green** is the agent. **Amber** is the
+developer prompting it — the prompt box, and the human gates. **Violet** is the
+developer editing an artifact by hand with no agent running at all: the two
+turns that have no prompt, the hand-edit that precedes turns 11 and 12, and the
+`> Decision:` triage quoted from the review. The timeline ticks are coloured the
+same way, so you can see at a glance which turns nobody prompted.
+
+The columns are draggable: pull either grip to resize the explorer and the detail
+panel, and the transcript takes what is left. Double-click a grip to reset it,
+or use the arrow keys when it has focus. Widths persist per browser.
+
+Playback is about three and a half minutes if you never stop; realistically it is
+however long the room wants to spend. **Auto-advance** in the title bar turns it
+back into a hands-off video for an unattended screen.
 
 Controls: <kbd>Space</kbd> play, then next turn · <kbd>&larr;</kbd>&nbsp;<kbd>&rarr;</kbd>
 turn · <kbd>D</kbd> what changed · <kbd>G</kbd> play the game · <kbd>Esc</kbd>
@@ -88,6 +106,24 @@ Needs git, node, python3 and Google Chrome. It rebuilds `shots/`, `game/` and
 `diffs.js` from the repository — nothing in there is hand-drawn or hand-edited,
 so it is safe to delete and rebuild. Change a stage's screenshot by editing the
 `shot` lines in the script rather than by editing a PNG.
+
+## Stage commands, and the turns that are not one
+
+The header chip on each turn is green for the five of the skill's seven stage
+commands this run used — `review-spec`, `fold-questions`, `generate-plan`,
+`implement-next-phase`, `final-review` — and **amber from turn 11 on**, because
+nothing after `final-review` is a stage command at all.
+
+The skill names a *bounded improvement cycle* as what follows a review, but it
+is not one of the seven, and there is no retro command. Turns 11, 12 and 13 are
+plain requests that the skill maps onto the artifacts it already has. Turn 11's
+panel says so and quotes the skill. It is worth being precise about in a room
+that is deciding whether to adopt this.
+
+Two commands never ran: `generate-questions`, because `review-spec` produced the
+questions artifact directly, and `review-phase`, folded into each phase's
+acceptance walk. Defensible at this size; the first thing to add back on a real
+project.
 
 ## The two frames worth pausing on
 

@@ -11,6 +11,7 @@
   --ink: #E9EDEA; --dim: #97A39B; --faint: #6B776F;
   --ai: #55B98F; --ai-soft: #16281F;
   --human: #E5924E; --human-soft: #2C2015;
+  --hand: #B98CD8; --hand-soft: #241C2F;
   --file: #7EAEE0; --warn: #D9C35F; --bad: #E0705C;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -43,7 +44,22 @@ body {
 .tb-btn:hover { color: var(--ink); border-color: var(--faint); }
 .tb-btn[aria-pressed="true"] { color: var(--ai); border-color: var(--ai); }
 
-.stagearea { display: grid; grid-template-columns: 216px minmax(0,1.06fr) minmax(0,1fr); min-height: 0; }
+.stagearea {
+  display: grid;
+  grid-template-columns: var(--wL, 216px) 7px minmax(160px, 1fr) 7px var(--wR, 34%);
+  min-height: 0;
+}
+.grip {
+  position: relative; cursor: col-resize; background: var(--line);
+  border: none; padding: 0; touch-action: none;
+}
+.grip::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: -3px; right: -3px;
+}
+.grip:hover, .grip.dragging { background: var(--ai); }
+.grip:focus-visible { outline: 2px solid var(--ai); outline-offset: -1px; }
+body.resizing { cursor: col-resize; user-select: none; }
+body.resizing iframe { pointer-events: none; }
 
 /* ---------- explorer ---------- */
 .explorer { background: var(--panel); border-right: 1px solid var(--line); overflow: auto; padding: 10px 0 20px; }
@@ -75,12 +91,15 @@ body {
 }
 .turnhead .num { color: var(--ink); font-size: 12px; }
 .turnhead .ttl { color: var(--dim); font-size: 12px; }
+.turnhead .stagechip { color: var(--ai); }
+.turnhead .freechip { color: var(--human); }
 .turnhead .sha { margin-left: auto; color: var(--faint); }
 .turnhead .sha::before { content: "commit "; color: #4d574f; }
 
 .msg { margin: 0 0 14px; }
 .who { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; margin-bottom: 5px; }
 .who.human { color: var(--human); }
+.who.hand { color: var(--hand); }
 .who.ai { color: var(--ai); }
 .prompt {
   background: var(--human-soft); border-left: 2px solid var(--human);
@@ -91,8 +110,8 @@ body {
 .prompt .caret { display: inline-block; width: 7px; height: 1em; background: var(--human); vertical-align: -2px; animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 .prompt.done .caret { display: none; }
-.handnote { border-left: 2px solid var(--human); background: var(--human-soft); padding: 10px 13px; border-radius: 0 5px 5px 0; color: #EBD9C6; font-size: 13.5px; }
-.handnote em { color: var(--human); font-style: normal; }
+.handnote { border-left: 2px solid var(--hand); background: var(--hand-soft); padding: 10px 13px; border-radius: 0 5px 5px 0; color: #E4D8EE; font-size: 13.5px; }
+.handnote em { color: var(--hand); font-style: normal; }
 
 .think { font-family: var(--mono); font-size: 12px; color: var(--faint); margin: 0 0 12px; }
 .think .row { display: flex; gap: 8px; opacity: 0; animation: fadein .35s ease forwards; }
@@ -166,7 +185,7 @@ body {
 .doc { border: 1px solid var(--line); border-radius: 6px; background: var(--bg); overflow: hidden; }
 .doc .doc-h { padding: 6px 11px; background: var(--panel-2); border-bottom: 1px solid var(--line); font: 400 11px/1.4 var(--mono); color: var(--file); }
 .doc pre { margin: 0; padding: 11px; font-family: var(--mono); font-size: 11.5px; line-height: 1.65; color: #C7D1CA; white-space: pre-wrap; word-break: break-word; }
-.doc pre .dec { color: var(--human); }
+.doc pre .dec { color: var(--hand); }
 .doc pre .hd { color: var(--ink); }
 .doc pre .cm { color: var(--faint); }
 .doc pre .ad { color: var(--ai); }
@@ -188,6 +207,24 @@ body {
 .bullets li { margin-bottom: 6px; }
 .bullets li b { color: var(--ink); font-weight: 600; }
 
+.quote { border-left: 2px solid var(--ai); background: var(--ai-soft); padding: 11px 13px; border-radius: 0 5px 5px 0; }
+.quote p { margin: 0 0 8px; font-size: 13px; color: #CFDCD5; }
+.quote p:last-of-type { margin-bottom: 0; }
+.quote b { color: var(--ink); }
+.quote code { font-family: var(--mono); font-size: .88em; color: var(--ai); }
+.qsrc { margin-top: 9px; font-family: var(--mono); font-size: 10.5px; color: var(--faint); }
+.qsrc::before { content: "— "; }
+
+.decisions { border-left: 2px solid var(--hand); background: var(--hand-soft); border-radius: 0 5px 5px 0; padding: 4px 0; }
+.decisions li { list-style: none; padding: 8px 13px; border-bottom: 1px solid rgba(185,140,216,.16); font-size: 12.5px; color: #E4D8EE; }
+.decisions li:last-child { border-bottom: none; }
+.decisions ul { margin: 0; padding: 0; }
+.decisions .q { display: block; color: var(--faint); font-family: var(--mono); font-size: 10.5px; margin-bottom: 3px; }
+.decisions .d { color: var(--hand); }
+.decisions .d::before { content: "> Decision: "; font-family: var(--mono); font-size: .88em; opacity: .75; }
+.decisions .defer { color: var(--warn); }
+.decisions .defer::before { content: "> Deferred: "; font-family: var(--mono); font-size: .88em; opacity: .75; }
+
 .callout { border-left: 2px solid var(--warn); background: #1F1E14; padding: 10px 12px; border-radius: 0 5px 5px 0; font-size: 13px; color: #E0DBC2; }
 .callout.miss { border-color: var(--bad); background: #241715; color: #EBD2CC; }
 .callout b { color: #fff; }
@@ -202,8 +239,8 @@ body {
 .track-line { position: absolute; left: 0; right: 0; top: 15px; height: 4px; border-radius: 2px; background: #29332C; }
 .track-fill { position: absolute; left: 0; top: 15px; height: 4px; border-radius: 2px; background: var(--ai); width: 0; }
 .tick { position: absolute; top: 9px; width: 2px; height: 16px; background: #3d4941; transform: translateX(-1px); }
-.tick.human { background: var(--human); }
-.tick.done { background: #5f6f66; }
+.tick.human { background: var(--hand); }
+.tick.done { opacity: .4; }
 .tstamp { font-family: var(--mono); font-size: 11.5px; color: var(--dim); flex: none; }
 .tlabel { font-family: var(--mono); font-size: 11.5px; color: var(--faint); flex: none; max-width: 26ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tlabel b { color: var(--ink); font-weight: 400; }
@@ -288,11 +325,12 @@ body {
 }
 @media (max-width: 1400px) { .shot-row { grid-template-columns: 1fr; } }
 @media (max-width: 1080px) {
-  .stagearea { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
-  .explorer { display: none; }
+  .stagearea { grid-template-columns: minmax(160px,1fr) 7px var(--wR, 40%); }
+  .explorer, #gripL { display: none; }
 }
 @media (max-width: 780px) {
   .stagearea { grid-template-columns: minmax(0,1fr); grid-template-rows: 1fr 1fr; }
+  .explorer, .grip { display: none; }
   .side { border-left: none; border-top: 1px solid var(--line); }
   .tlabel, .tstamp { display: none; }
 }
@@ -319,7 +357,13 @@ body {
       <div class="ex-legend">A&nbsp; added this turn<br>M&nbsp; modified this turn</div>
     </aside>
 
+    <div class="grip" id="gripL" role="separator" aria-orientation="vertical" tabindex="0"
+         aria-label="Resize the file explorer" title="Drag to resize · double-click to reset"></div>
+
     <main class="chat" id="chat" aria-live="polite" aria-label="Agent session transcript"></main>
+
+    <div class="grip" id="gripR" role="separator" aria-orientation="vertical" tabindex="0"
+         aria-label="Resize the detail panel" title="Drag to resize · double-click to reset"></div>
 
     <aside class="side" id="side" aria-label="Stage detail">
       <div class="side-head" id="sidehead">WHAT CAME OUT</div>
@@ -455,6 +499,13 @@ var TREE = [
 ];
 
 /* --- the fourteen turns --------------------------------------------------
+   skill:    one of the skill's seven stage commands - review-spec,
+             generate-questions, fold-questions, generate-plan,
+             implement-next-phase, review-phase, final-review.
+   freeform: for turns that are none of those. Everything after final-review is
+             a plain request: the skill describes a "bounded improvement cycle"
+             as what follows a review, but it is not a stage command, and there
+             is no retro command at all.
    game:     which commit's source the "Play the game" tab should load, or null
              before any page exists. Commits that changed no runtime file point
              at the last commit that did.
@@ -466,7 +517,7 @@ var STAGES = [
   hand: "No prompt. A 49-line spec, written by hand, is the entire repository. <em>It never says how you win.</em>",
   files: [ {p:"specs/001-gridsweep-spec.md", k:"A", a:49, d:0} ],
   panels: [
-    {t:"doc", h:"THE SPEC, AS HANDED OVER", f:"specs/001-gridsweep-spec.md",
+    {t:"doc", h:"WHAT THE AGENT WAS GIVEN", f:"specs/001-gridsweep-spec.md",
      body:"<span class='hd'>## Acceptance Criteria</span>\n\n- Revealing a mine ends the game as a loss.\n- Every revealed safe cell displays its adjacent-mine\n  count.\n- Revealing a safe cell with a zero count cascades to\n  reveal the surrounding region.\n- Once the game has ended, further input has no effect.\n- The board logic has automated test coverage and the\n  suite passes.\n\n<span class='cm'>&lt;- and that is the end of the file</span>"},
     {t:"note", body:"Five criteria for losing, cascading, and locking. <b>Not one of them describes winning</b> &mdash; even though &ldquo;once the game has ended&rdquo; quietly assumes a win state exists."}
   ],
@@ -494,22 +545,32 @@ var STAGES = [
   ],
   say: "Fifteen numbered questions across five must-answer topics. Each one carries why it matters, a proposed fallback, and the cost of getting it wrong. <strong>The first topic is the win condition.</strong>",
   panels: [
-    {t:"doc", h:"QUESTION 1, VERBATIM", f:"specs/001-gridsweep-questions-01.md",
-     body:"<span class='hd'>### Topic: Win condition</span>\n\n1. The spec defines only how the game is lost. What\n   ends the game as a win? There are 54 safe cells;\n   nothing says what happens when the last one is\n   revealed, and \"Once the game has ended, further\n   input has no effect\" implies a win state exists\n   without ever defining it.\n   - Proposed fallback: the game is won the moment\n     all 54 safe cells are revealed, regardless of\n     flag placement...\n   - Cost if wrong: cheap now, expensive later. The\n     win predicate sits at the centre of the state\n     machine and is the thing tests assert against."},
-    {t:"note", body:"The agent did not invent a win condition and carry on. <b>It refused to guess, and priced the guess.</b> That is the whole move."}
+    {t:"list", h:"WHERE THE FIFTEEN QUESTIONS LANDED", items:[
+      "<b>Win condition</b> &mdash; the spec never defines one",
+      "<b>How tests run without a build step</b> &mdash; the constraints rule out every third-party runner",
+      "<b>Marking suspected mines</b> &mdash; named in the spec, never specified",
+      "<b>Input</b> &mdash; which keys, and what the pointer does",
+      "<b>End of game</b> &mdash; what the finished board shows",
+      "<i>Display details</i> &mdash; the one topic filed as a clarification, not a blocker"
+    ]},
+    {t:"quote", h:"WHY THE FIRST ONE IS A GATE, NOT A NOTE",
+     body:["<b>Cost if wrong:</b> cheap now, expensive later. The win predicate sits at the centre of the state machine and is the thing tests assert against; changing it after the logic module and its test suite exist means reworking both."],
+     src:"specs/001-gridsweep-questions-01.md, question 1"},
+    {t:"note", body:"Every question carries a proposed fallback <i>and</i> that costing. <b>The agent did not invent a win condition and carry on &mdash; it refused to guess, and priced the guess.</b>"}
   ],
-  notes: "The payoff turn of the demo. The agent found the hole in the spec without being told there was one. Open 'What changed' and read the full questions file on screen - fifteen of these, and the room will recognise most of them as arguments they have had."
+  notes: "The payoff turn of the demo. The agent found the hole in the spec without being told there was one. Open 'What changed' and read a couple of the fifteen aloud - the room will recognise most of them as arguments they have had."
 },
 {
   n: "02", sha: "9061655", title: "Answering the questions", actor: "human", game: null,
   hand: "No prompt. Fifteen answers, written by hand into the questions file as <em>&gt; Decision:</em> blocks. The agent is not running.",
   files: [ {p:"specs/001-gridsweep-questions-01.md", k:"M", a:30, d:0} ],
   panels: [
-    {t:"doc", h:"THE HUMAN'S ANSWER", f:"specs/001-gridsweep-questions-01.md",
-     body:"1. The spec defines only how the game is lost. What\n   ends the game as a win?\n\n  <span class='dec'>&gt; Decision: Use proposed fallback.</span>\n\n2. Does correct flagging play any part in winning?\n\n  <span class='dec'>&gt; Decision: Use proposed fallback.</span>"},
+    {t:"quote", h:"WHAT THE RETRO SAID ABOUT THIS, TWELVE TURNS LATER",
+     body:["<b>&gt; Decision: inline in the review.</b> Answering each finding where it was written, rather than in a summary at the end, meant no decision had to be matched back to its question. <b>This is the convention most worth keeping.</b>"],
+     src:"specs/001-gridsweep-retro.md, What went well"},
     {t:"note", body:"&ldquo;Use the fallback&rdquo; is still a decision, and the file records that a human made it. <b>A blank answer is unresolved, not agreed</b> &mdash; the skill will not fold a fallback nobody accepted."}
   ],
-  notes: "Thirty lines of human writing, the cheapest part of the run and the part that decides everything after it. The diff for this turn is worth showing: it is entirely the developer's words."
+  notes: "Thirty lines of human writing, the cheapest part of the run and the part that decides everything after it. The diff for this turn is worth showing: it is entirely the developer's words, sitting under the agent's questions."
 },
 {
   n: "03", sha: "8df5722", title: "fold-questions", actor: "ai", skill: "fold-questions", game: null,
@@ -540,9 +601,9 @@ var STAGES = [
       ["Win condition", "defined", "hi"],
       ["Questions still open", "0", ""]
     ]},
-    {t:"note", body:"The spec is now the single source of truth, and the only artifact the plan will be generated from. <b>Nothing downstream reads the questions file again.</b>"}
+    {t:"note", body:"This is the last turn at which changing your mind is free. From here the spec is the only artifact the plan reads, and <b>nothing downstream ever opens the questions file again</b> &mdash; it survives as the record of who decided what."}
   ],
-  notes: "The diff here is the most instructive one in the run: a +93 rewrite of the spec in which every added line traces to a decision a human wrote. Show it."
+  notes: "Worth saying out loud: the agent edits the spec, but only with answers a human wrote. It never resolves its own question. The diff is the most instructive one in the run - every added line traces to a decision in the previous turn."
 },
 {
   n: "04", sha: "d1b7a4d", title: "generate-plan", actor: "ai", skill: "generate-plan", game: null,
@@ -573,8 +634,13 @@ var STAGES = [
       "<b>Phase 04</b> &mdash; Input, new game, and status wiring",
       "<b>Phase 05</b> &mdash; End-state presentation and acceptance sweep"
     ]},
-    {t:"note", body:"Still no code. <b>Four turns in, the repository contains three markdown files</b> &mdash; and every decision the code will encode has a name and an owner."}
+    {t:"quote", h:"WHY THAT ORDER",
+     body:["Phase order front-loads the dual-load risk (Phase 01) and the full rule set (Phase 02) so the UI phases build on settled behaviour.",
+           "The only automated coverage is over <code>board.js</code>; <code>ui.js</code> is verified by hand in the browser at the end of Phases 03, 04, and 05."],
+     src:"specs/001-gridsweep-plan.md, Handoff notes"},
+    {t:"note", body:"That second line is the plan admitting a hole in itself on the day it was written. <b>It becomes debt item 1, and it takes two more turns and $10.70 to close.</b>"}
   ],
+  hold: 2400,
   notes: "The pause here is the point of the whole workflow. Four turns, zero code, and the expensive disagreements have already happened in a text file that costs nothing to change. Good place to stop and take questions."
 },
 {
@@ -604,9 +670,12 @@ var STAGES = [
   say: "First code. <code>board.js</code> is pure logic with no DOM; the stub page exists only to prove the file loads as a classic script over <code>file://</code>. Seven tests, green.",
   panels: [
     {t:"term", body:"<span class='cmd'>node --test</span>\n<span class='pass'>&#8470; tests 7 &nbsp;pass 7 &nbsp;fail 0</span>\n<span class='zero'>exit 0</span>"},
-    {t:"shot", img:"01-stub.png", cap:"The page at commit 2350a33. Phase 01 ships a dual-load check, not a game &mdash; it prints the computed adjacency grid to prove the logic loaded."}
+    {t:"quote", h:"THE PLAN ARGUING WITH ITSELF, IN ITS OWN EVIDENCE",
+     body:["<b>Deviation from the plan text, deliberate:</b> the layout is stored in <code>board.js</code> as an array of eight 8-character strings rather than the spec's spaced grid, which is the same data in a form the code can index directly. Mine placement is asserted against the spec's coordinates, <b>so the two representations are held equal by test.</b>"],
+     src:"specs/001-gridsweep-plan.md, Phase 01 evidence"},
+    {t:"shot", h:"THE PAGE AT THIS COMMIT", img:"01-stub.png", cap:"Phase 01 ships a dual-load check, not a game — it prints the computed adjacency grid to prove the logic loaded."}
   ],
-  notes: "Honest moment: phase one produces something nobody would call a game. That is what a bounded phase looks like. Open 'Play the game' here - the room should see the stub for themselves before the grid arrives two turns later."
+  notes: "Two things. Phase one produces something nobody would call a game - that is what a bounded phase looks like. And the phase reports its own deviation rather than quietly complying: the retro names that habit as the thing that made the final review fast."
 },
 {
   n: "06", sha: "9d694e8", title: "implement-next-phase &middot; Phase 02", actor: "ai",
@@ -633,7 +702,11 @@ var STAGES = [
   ],
   say: "The entire game now works &mdash; and is completely invisible. <strong>Nothing on screen changed</strong>, because Phase 02 is rules only. Twenty more tests say it is right.",
   panels: [
-    {t:"term", body:"<span class='cmd'>node --test</span>\n<span class='pass'>&#8470; tests 27 &nbsp;pass 27 &nbsp;fail 0</span>\n<span class='zero'>exit 0 &nbsp;(7 from Phase 01, 20 new)</span>"},
+    {t:"quote", h:"WHAT RED ACTUALLY LOOKED LIKE",
+     body:["<b>Red:</b> the 20 new tests were appended and run first; every one failed with <code>TypeError: game.reveal is not a function</code> / <code>game.toggleMark is not a function</code>, because <code>createGame()</code> still returned only <code>snapshot</code>.",
+           "<b>Green:</b> <code>node --test</code> reports <code>pass 27 / fail 0</code> and exits <code>0</code> (7 Phase 01 tests plus the 20 new ones)."],
+     src:"specs/001-gridsweep-plan.md, Phase 02 evidence"},
+    {t:"note", body:"The plan records the failure message, not just &ldquo;tests written first&rdquo;. <b>That is the difference between claiming red/green and evidencing it</b> &mdash; and it is the thing a reviewer six months later can actually check."},
     {t:"note", body:"The win condition from question 1 is now a predicate in <b>board.js</b> with tests asserting it. Trace it back: <b>agent asked &rarr; human decided &rarr; spec recorded &rarr; plan scheduled &rarr; test proves.</b>"}
   ],
   notes: "Open 'What changed' and scroll to board.js: the win predicate is right there, and it ignores flags because question 2 said so. Then ask the room how they would find that out six months later on a normal project."
@@ -665,10 +738,11 @@ var STAGES = [
   ],
   say: "A board you can look at. <strong>Not one you can touch</strong> &mdash; input is Phase 04, and the plan is explicit that rendering lands before it.",
   panels: [
-    {t:"shot", img:"03-grid.png", cap:"Commit cd7f7e8. Sixty-four cells, a mine counter, a status line and a New game button &mdash; all inert."},
-    {t:"note", body:"<b>board.js</b> still has no idea the DOM exists, and <b>ui.js</b> still has no idea what the rules are. That split was a spec decision, made at question 3."}
+    {t:"shot", h:"THE PAGE AT THIS COMMIT", img:"03-grid.png", cap:"Sixty-four cells, a mine counter, a status line and a New game button — all inert. Open “Play the game” and click one."},
+    {t:"note", body:"<b>board.js</b> still has no idea the DOM exists, and <b>ui.js</b> still has no idea what the rules are. That split was a spec decision, made at question 3, and the final review will call it the strongest piece of design in the project."},
+    {t:"note", kind:"miss", body:"Note where the <b>New game</b> button landed: in the HUD, above the grid, next to the counter. It went there because that is where the counter was. <b>The spec said the button exists and what it does. It never said where.</b> Nothing in the next ten turns questions it."}
   ],
-  notes: "Open 'Play the game' and click a cell in front of the room. Nothing happens, and that is correct: the phase boundary is real, not a slide. Also point out the New game button up in the HUD - remember it, because it becomes one of the two things the whole process fails to catch."
+  notes: "Open 'Play the game' and click a cell in front of the room. Nothing happens, and that is correct: the phase boundary is real, not a slide. Then point at the New game button - it is one of the two things the whole process fails to catch."
 },
 {
   n: "08", sha: "126811e", title: "implement-next-phase &middot; Phase 04", actor: "ai",
@@ -697,9 +771,13 @@ var STAGES = [
   panels: [
     {t:"film", h:"THE GAME AT THIS COMMIT", frames:["04-1.png","04-2.png","04-3.png","04-4.png","04-5.png","04-6.png"],
      cap:"Six real captures of commit 126811e being played: cursor placed, corner revealed, cascade opens, two cells marked, two more revealed."},
-    {t:"note", kind:"miss", body:"Acceptance criterion 7 &mdash; <b>&ldquo;the game is fully playable using only the keyboard&rdquo;</b> &mdash; is satisfied here, honestly and literally. A first-time player still cannot play it."}
+    {t:"note", kind:"miss", body:"Acceptance criterion 7 &mdash; <b>&ldquo;the game is fully playable using only the keyboard&rdquo;</b> &mdash; is satisfied here, honestly and literally. A first-time player still cannot play it."},
+    {t:"quote", h:"THE RETRO, ON WHY NOTHING COULD CATCH THAT",
+     body:["Every acceptance criterion has the shape <b>&ldquo;given this input, this happens&rdquo;</b>. None has the shape <b>&ldquo;a player can find out what the inputs are&rdquo;</b>.",
+           "A criterion can be satisfied and still not mean what it appears to promise."],
+     src:"specs/001-gridsweep-retro.md, What the process missed"}
   ],
-  notes: "Stop here and hand the keyboard to someone who has not seen the spec. They will not know that F marks a cell, because nothing on the page says so. This is the strongest single moment in the deck: a criterion that is satisfied and still does not mean what it appears to promise."
+  notes: "Stop here and hand the keyboard to someone who has not seen the spec. They will not know that F marks a cell, because nothing on the page says so. This is the strongest single moment in the deck."
 },
 {
   n: "09", sha: "8dfa7b5", title: "implement-next-phase &middot; Phase 05", actor: "ai",
@@ -729,9 +807,14 @@ var STAGES = [
   panels: [
     {t:"film", h:"LOSING, IN THREE FRAMES", frames:["05-lose-1.png","05-lose-2.png","05-lose-3.png"],
      cap:"Mid-game, cursor moved onto a hidden mine, and the board opening: the mine that was hit in red, the rest pale, a wrong mark crossed out."},
-    {t:"shot", h:"AND WINNING", img:"05-win.png", cap:"All 54 safe cells revealed. The board locks and every remaining mine shows."}
+    {t:"shot", h:"AND WINNING", img:"05-win.png", cap:"All 54 safe cells revealed. The board locks and every remaining mine shows."},
+    {t:"quote", h:"WHERE THE PHASE REFUSED ITS OWN PLAN",
+     body:["<b>Deviation from the plan text, and worth your attention:</b> the plan asked for a win test &ldquo;with all ten marks placed on safe cells&rdquo;. <b>That state cannot exist at win time</b>, because winning requires all 54 safe cells revealed and a cell can never be both revealed and marked.",
+           "The rule the spec actually means &mdash; the win check never consults marks &mdash; is covered by three tests instead."],
+     src:"specs/001-gridsweep-plan.md, Phase 05 evidence"}
   ],
-  notes: "Emphasise that the phase prompt never changed across five turns. People assume orchestration has to be prompted; the state lives in the plan file, not in the conversation. Then play a game to a loss on the projector."
+  hold: 2600,
+  notes: "Two points. The phase prompt never changed across five turns - the state lives in the plan file, not the conversation. And the plan asked for an impossible test; the phase did not write it and said why. An agent that had quietly written something green instead is the failure mode this evidence trail exists to catch."
 },
 {
   n: "10", sha: "187fcd9", title: "final-review", actor: "ai", skill: "final-review",
@@ -758,29 +841,34 @@ var STAGES = [
   say: "Recommendation: <strong>go</strong>. No must-fix issues. Two important improvements, a handful of cleanups, and a four-item debt register &mdash; <strong>including the agent turning in its own dead code.</strong>",
   gate: {h:"HUMAN GATE &middot; TRIAGE", b:"Findings answered inline in the review file, by hand, before any of them were acted on. The agent does not get to decide which of its own findings matter."},
   panels: [
-    {t:"list", h:"WHAT THE REVIEW FOUND", items:[
+    {t:"quote", h:"THE VERDICT, IN ITS OWN WORDS",
+     body:["The implementation matches the spec. Every acceptance criterion holds, the board logic is genuinely DOM-free, the delivery constraints are enforced by tests rather than by memory, and <b>the plan's evidence trail is unusually honest &mdash; including two deviations it flags against itself</b>.",
+           "Nothing blocks acceptance. What follows is <b>one piece of dead code, one real piece of test debt, and a short list of cleanups</b>."],
+     src:"specs/001-gridsweep-final-review.md, Executive summary"},
+    {t:"list", h:"WHAT IT FOUND", items:[
       "<b>Critical issues</b> &mdash; none",
-      "<b>1.</b> <code>GridsweepUI</code> is dead code that publishes the live game object",
-      "<b>2.</b> A third of the suite tests source text, not behaviour",
+      "<b>Imp. 1</b> &mdash; <code>GridsweepUI</code> is dead code that publishes the live game object",
+      "<b>Imp. 2</b> &mdash; 15 of 42 tests assert regexes over source text, not behaviour",
       "<b>Debt register</b> &mdash; 4 items, 2 of them caused by the no-dependencies rule",
       "<b>Verdict</b> &mdash; go"
     ]},
-    {t:"note", body:"Finding 1 is a debug hook the agent added in Phase 04 and then flagged in Phase 05. <b>The review is adversarial about the reviewer's own work</b>, which is why it is a separate turn and not a paragraph at the end of a phase."}
+    {t:"note", body:"Imp. 1 is a debug hook the agent added in Phase 04 and then flagged in Phase 05, and its own comment for it turned out to contradict the Phase 05 evidence. <b>The review is adversarial about the reviewer's own work</b>, which is why it is a separate turn and not a paragraph at the end of a phase."}
   ],
-  notes: "No code changed this turn - the 'Play the game' tab still shows Phase 05. Open 'What changed' instead: 240 lines of review, and the whole of it is the agent arguing with itself in a file the human then annotates."
+  notes: "No code changed this turn - 'Play the game' still shows Phase 05. The point is the 240 lines: the agent arguing with itself, in a file the human is about to annotate. Do not advance until the room has seen that it found its own dead code. If anyone is counting stage commands: this run used five of the skill's seven. `generate-questions` was not needed because `review-spec` produced the questions artifact directly, and `review-phase` was folded into the acceptance walk at the end of each phase - defensible on a project this size, and the first thing to add back on a real one."
 },
 {
   n: "11", sha: "425d2b7", title: "Improvement pass 01", actor: "ai",
-  skill: "bounded improvement pass", game: "425d2b7", gameKind: "live",
+  freeform: "bounded improvement cycle", game: "425d2b7", gameKind: "live",
+  pre: "The developer opens <em>001-gridsweep-final-review.md</em> and answers it in place &mdash; a <em>&gt; Decision:</em> under every finding and every debt item, including two that say <em>not now</em>. Nothing runs until that is done.",
   prompt: "Use the human-gated-spec-driven-ai-development skill to make a bounded improvement pass for 001-gridsweep-plan.md covering the Important improvements and Cleanup opportunities in 001-gridsweep-final-review.md",
   think: [
     "Reading the triaged review - scope is the accepted findings, nothing else",
     "Removing the GridsweepUI debug hook and its last caller",
     "Replacing source-order dependence in the CSS with explicit specificity",
-    "Rewriting the brittle half of the guard tests"
+    "Re-aiming the brittle guard tests, keeping the ones that guard delivery"
   ],
   tools: [
-    {k:"read", v:"<b>specs/001-gridsweep-final-review.md</b> <i>&middot; human notes attached</i>"},
+    {k:"read", v:"<b>specs/001-gridsweep-final-review.md</b> <i>&middot; human decisions attached</i>"},
     {k:"edit", v:"<b>ui.js</b> <i>&middot; &minus;10, GridsweepUI removed</i>"},
     {k:"edit", v:"<b>board.js</b> <i>&middot; +28 &minus;22</i>"},
     {k:"edit", v:"<b>styles.css</b> <i>&middot; +6 &minus;5</i>"},
@@ -795,28 +883,49 @@ var STAGES = [
     {p:"specs/001-gridsweep-plan.md", k:"M", a:139, d:0},
     {p:"prompts.md", k:"M", a:6, d:1}
   ],
-  say: "Seven files touched and <strong>not one pixel moved.</strong> The screenshot from Phase 05 is byte-for-byte identical to the one from here &mdash; every change was internal.",
+  say: "Eight findings closed, and <strong>not one pixel moved</strong> &mdash; every change was internal. But the pass stopped exactly at its brief: <strong>two debt items it was not scoped for are still open</strong>, and it says so in writing.",
+  hold: 1600,
   panels: [
-    {t:"doc", h:"THE ACTUAL DIFF", f:"styles.css",
-     body:"<span class='rm'>- .cell.exploded {</span>\n<span class='ad'>+ .cell.mine.exploded {</span>\n    background: #d02020;\n    color: #ffffff;\n  }\n\n<span class='rm'>- .cell.wrong-mark {</span>\n<span class='ad'>+ .cell.marked.wrong-mark {</span>\n    background: #e6cfcf;\n    color: #a00000;\n  }"},
-    {t:"note", body:"The old rules only won the cascade because of where they sat in the file. <b>Now the precedence is in the selector</b>, so moving either rule changes nothing. A finding no screenshot could ever have caught."}
+    {t:"human", h:"THE DEVELOPER'S TRIAGE, WRITTEN INTO THE REVIEW",
+     items:[
+       {q:"Imp. 1 — dead GridsweepUI global", d:"Delete the unneeded scaffolding."},
+       {q:"Imp. 2 — a third of the suite tests source text", d:"Narrow the scripts focusing on not allowing tests to stay green while renderer is completely broken. Implement the suggestions above."},
+       {q:"Debt 1 — no automated coverage of renderer behaviour", d:"promote the driver into the repo.", defer:true},
+       {q:"Debt 3 — criterion 6 has two readings", d:"Close in spec with code as source of truth.", defer:true},
+       {q:"Debt 4 — manual verification artifacts are gone", d:"We can regenerate screenshots and CDP driver if needed. This is ok for demo."}
+     ],
+     src:"specs/001-gridsweep-final-review.md, answered inline before this pass ran"},
+    {t:"list", h:"WHAT THE PASS ACTUALLY CLOSED", items:[
+      "<b>8 done</b> &mdash; dead global, grep tests re-aimed, export narrowed, duplicate neighbour walk, CSS specificity, test helpers, cursor clamping",
+      "<b>Debt 1</b> &mdash; promote the browser driver &middot; <b>not done, out of the pass's scope</b>",
+      "<b>Debt 3</b> &mdash; close criterion 6 in the spec &middot; <b>not done, out of the pass's scope</b>",
+      "<b>Debt 4</b> &mdash; no action, as decided"
+    ]},
+    {t:"note", kind:"miss", body:"A bounded pass will not quietly widen to finish the job, <b>even when the developer's own decision above says to do the thing.</b> Getting those two closed took a second prompt that named them &mdash; which is the next turn."},
+    {t:"quote", h:"WHY THIS TURN HAS NO STAGE NAME",
+     body:["The skill has <b>seven stage commands</b> &mdash; <code>review-spec</code>, <code>generate-questions</code>, <code>fold-questions</code>, <code>generate-plan</code>, <code>implement-next-phase</code>, <code>review-phase</code>, <code>final-review</code>. <b>This is none of them.</b>",
+           "&ldquo;If the user wants changes after the final review, treat that as <b>a new bounded improvement cycle</b> grounded in the same approved spec and plan.&rdquo;",
+           "So the prompt is a plain request that the skill maps onto the artifacts it already has. The same is true of the retro two turns from now: <b>there is no retro command.</b>"],
+     src:"skills/human-gated-spec-driven-ai-development/SKILL.md"}
   ],
-  notes: "A whole turn whose entire value is invisible. Play the game here and then on turn 09 - they are identical. Ask what would have caught this without a review turn."
+  notes: "This is the turn to slow down on. The right panel is the human half of the loop: findings answered where they were written, two of them deferred on purpose. Then show that the pass honoured the deferral rather than helpfully overreaching - and that this cost a whole extra turn. Note the chip in the header is amber, not green: from here to the end, no turn is a stage command."
 },
 {
   n: "12", sha: "ce6e028", title: "Improvement pass 02", actor: "ai",
-  skill: "bounded improvement pass", game: "ce6e028", gameKind: "live",
+  freeform: "bounded improvement cycle", game: "ce6e028", gameKind: "live",
+  pre: "Pass 01 left debt items 1 and 3 open by name. Closing them needs a second prompt that <em>names them</em> &mdash; and adds the constraint the first pass would otherwise have had to guess.",
   prompt: "Use the human-gated-spec-driven-ai-development skill to make a bounded improvement pass for 001-gridsweep-plan.md covering technical debt items 1 and 3 in 001-gridsweep-final-review.md\n\nItem 1 must not add npm packages or break `node --test` where Chrome is absent.",
   think: [
     "Scope is exactly two named debt items - the pass may not widen",
     "Item 1 needs renderer coverage, and the spec forbids installing Playwright",
     "Writing a Chrome DevTools Protocol client from Node built-ins",
-    "Skipping the renderer suite cleanly where no Chrome exists"
+    "Mutation-testing the new suite: what could break before, and what breaks now"
   ],
   tools: [
     {k:"write", v:"<b>tools/chrome-driver.js</b> <i>&middot; 416 lines, zero dependencies</i>"},
     {k:"write", v:"<b>test/browser.test.js</b> <i>&middot; 408 lines, real key and mouse events</i>"},
-    {k:"edit",  v:"<b>specs/001-gridsweep-spec.md</b> <i>&middot; +19 &minus;3</i>"},
+    {k:"edit",  v:"<b>specs/001-gridsweep-spec.md</b> <i>&middot; +19 &minus;3, criterion 6 closed</i>"},
+    {k:"run",   v:"13 renderer mutations on scratch copies"},
     {k:"run",   v:"node --test <i>&middot; tests 54 / pass 54 / fail 0, ~2.3s</i>", ok:true}
   ],
   files: [
@@ -828,53 +937,95 @@ var STAGES = [
     {p:"specs/001-gridsweep-plan.md", k:"M", a:165, d:0},
     {p:"prompts.md", k:"M", a:14, d:1}
   ],
-  say: "The debt register closes. It cost <strong>824 lines of hand-written test infrastructure</strong> to do what a dependency would have done in ten lines of config &mdash; because a constraint said no dependencies, and the constraint held.",
+  say: "The debt register closes. It cost <strong>824 lines of hand-written test infrastructure</strong> to do what a dependency would have done in ten lines of config &mdash; and it was <strong>the single most expensive turn in the project.</strong>",
   panels: [
-    {t:"kv", h:"WHAT THE CONSTRAINT COST", rows:[
+    {t:"quote", h:"THE DEBT IS PAID, NOT JUST ADDRESSED",
+     body:["Of thirteen renderer mutations tried on scratch copies, <b>eleven were invisible to the old suite and all thirteen are caught now</b> &mdash; a board that draws nothing, a flag that does not appear, a status line that stays empty, a cursor that wraps, labels that stop describing cells, a context menu that opens.",
+           "<b>No shipped file changed.</b> <code>board.js</code>, <code>ui.js</code>, <code>styles.css</code> and <code>index.html</code> are byte-for-byte what pass 01 left, which is what makes the mutation table meaningful."],
+     src:"specs/001-gridsweep-final-review.md, Improvement pass 02"},
+    {t:"kv", h:"WHAT IT COST", rows:[
       ["tools/chrome-driver.js", "416 lines", "warnv"],
       ["test/browser.test.js", "408 lines", "warnv"],
       ["Playwright equivalent", "~10 lines", "hi"],
-      ["Tests, end of cycle", "54 &middot; all green", "hi"]
+      ["This turn, at API rates", "≈$10.70", "warnv"],
+      ["Everything after the review", "44% of spend", "warnv"],
+      ["Tests, end of cycle", "54 · all green", "hi"]
     ]},
-    {t:"note", body:"The retro argues this one is <b>half right</b>: the delivery constraint (no build, no install, opens over <code>file://</code>) was correct and still holds. The <b>therefore no dev dependencies</b> that got smuggled in behind it never justified itself &mdash; and test tooling never ships."}
+    {t:"quote", h:"AND THE PASSES HELD THEIR EDGES",
+     body:["<b>Bounded passes with explicit out-of-scope lists.</b> Pass 01 deferred debt items 1 and 3 by name and did not drift into them. Pass 02 picked up exactly those two. <b>Neither pass expanded.</b>"],
+     src:"specs/001-gridsweep-retro.md, What went well"},
+    {t:"note", body:"The retro argues the constraint was <b>half right</b>: the delivery constraint (no build, no install, opens over <code>file://</code>) was correct and still holds. The <b>therefore no dev dependencies</b> that got smuggled in behind it never justified itself &mdash; and test tooling never ships."}
   ],
-  notes: "The most expensive turn in the project, about $10.70 on API rates. Open 'What changed' and scroll tools/chrome-driver.js on the projector - 416 lines is a lot of screen. The process faithfully executed a decision the retro then argues was wrong: gates enforce decisions, they do not make them good."
+  notes: "The most expensive turn in the project, and the one that best shows the trade-off. Two things to land: the mutation table is what turns 'we added tests' into evidence, and the process faithfully executed a decision the retro then argues was wrong. Gates enforce decisions; they do not make them good."
 },
 {
-  n: "13", sha: "ac5be2e", title: "The retro", actor: "ai", skill: "retro",
+  n: "13", sha: "ac5be2e", title: "The retro &middot; three prompts, one commit", actor: "ai", freeform: "plain request",
   game: "ce6e028", gameKind: "live",
-  prompt: "Write a retro of the demo project in specs/001-gridsweep-retro.md . Also evaluate if doing things without a package.json and using some standard tools and layout for development was better than doing things a standard way. I thought the project would be simpler than it was but we had to make tools and other things a normal \"compiled\" project wouldn't have.",
-  think: [
-    "Counting shipped lines against test and tooling lines",
-    "Reading the session transcripts for token usage and elapsed time",
-    "Arguing the no-package.json constraint both ways",
-    "Writing down what the process structurally could not catch"
-  ],
-  tools: [
-    {k:"read",  v:"every artifact in <b>specs/</b> and every source file"},
-    {k:"run",   v:"line counts across shipped, test, tooling and spec"},
-    {k:"read",  v:"~/.claude/projects/-Users-res-gridsweep-demo/ <i>&middot; 568 requests</i>"},
-    {k:"write", v:"<b>specs/001-gridsweep-retro.md</b> <i>&middot; 360 lines</i>"}
+  cycles: [
+    {
+      prompt: "Write a retro of the demo project in specs/001-gridsweep-retro.md .  Include the information on what you suggest above.  Also evaluate if doing things without a package.json and using some standard tools and layout for development was better than doing things a standard way.  I thought the project would be stimpler than it was but we had to make tools and other things a normal \"compiled\" project wouldn't have.\n\nAdditionally I had noticed the following issues captured by a prompt you should not run now but the issues should be included in a retro. […a 002 review-spec prompt for a visible keyboard legend and moving the New game button below the grid…]",
+      think: [
+        "Counting shipped lines against test and tooling lines",
+        "Arguing the no-package.json constraint both ways",
+        "Writing down what the process structurally could not catch"
+      ],
+      tools: [
+        {k:"read",  v:"every artifact in <b>specs/</b> and every source file"},
+        {k:"run",   v:"line counts across shipped, test, tooling and spec"},
+        {k:"write", v:"<b>specs/001-gridsweep-retro.md</b> <i>&middot; draft</i>"}
+      ],
+      say: "Written &mdash; including the two defects the developer found by playing it, which no stage of the process could have."
+    },
+    {
+      prompt: "Is there a way to determine how much time claude spent yesterday and today on gridsweep and how many tokens were spent plus their cost if it was paid on the API and not through subscription?",
+      think: [
+        "Reading the local session transcripts for per-request token usage",
+        "Merging twelve sessions onto one timeline, cutting on idle gaps",
+        "Pricing the totals at published API rates"
+      ],
+      tools: [
+        {k:"read", v:"~/.claude/projects/-Users-res-gridsweep-demo/ <i>&middot; 568 requests</i>"},
+        {k:"run",  v:"token totals by day and model <i>&middot; 49.7M tokens</i>"}
+      ],
+      say: "<strong>49.7M tokens, $66.78 at API rates</strong> &mdash; and about $201 saved by prompt caching, because 46.7M of those tokens were cache reads."
+    },
+    {
+      prompt: "Add the 43% figure to the retro's \"by the numbers\" section.  Also add a section in the bottom about the time, tokens, and cost.  Note that I was doing this in the background so the time gaps were more about doing other things than working on this project. […]",
+      think: [
+        "Folding the cost figures into the retro's by-the-numbers table",
+        "Qualifying the time figures - gaps are the developer elsewhere, not thinking",
+        "Adding the next-step prompt for the brittle guard test to Open items"
+      ],
+      tools: [
+        {k:"edit", v:"<b>specs/001-gridsweep-retro.md</b> <i>&middot; 360 lines, final</i>"},
+        {k:"edit", v:"<b>prompts.md</b> <i>&middot; all three prompts recorded</i>"}
+      ]
+    }
   ],
   files: [
     {p:"specs/001-gridsweep-retro.md", k:"A", a:360, d:0},
     {p:"prompts.md", k:"M", a:40, d:11}
   ],
-  say: "The game is <strong>18% of the repository.</strong> Test and tooling code outweighs shipped code 2.2 : 1. And closing the debt cost 44% of the total spend.",
+  say: "Three prompts, <strong>one commit.</strong> The game is <strong>18% of the repository</strong>, test and tooling code outweighs shipped code 2.2 : 1, and closing the debt cost 44% of the total spend.",
   panels: [
     {t:"kv", h:"BY THE NUMBERS", rows:[
       ["Shipped game", "726 lines", ""],
       ["Tests and tooling", "1,614 lines", "warnv"],
       ["Spec artifacts", "1,720 lines", ""],
-      ["Tests, final", "54 &middot; all green", "hi"],
+      ["Tests, final", "54 · all green", "hi"],
       ["Claude working time", "~2h 03m", ""],
       ["Tokens", "49.7M", ""],
       ["Cost at API rates", "$66.78", ""],
       ["Saved by prompt caching", "$201", "hi"]
     ]},
+    {t:"quote", h:"THE OPEN ITEM THE RETRO WOULD NOT LET GO",
+     body:["<b>A guard test added in pass 02 has the exact brittleness the final review criticised.</b> It counts regex matches, so writing <code>test('...', { skip, concurrency: 1 }, ...)</code> — a no-op for behaviour — turns it red.",
+           "This is debt item 2's shape, <b>reintroduced by the pass that closed debt item 1</b>. It was verified to go red for the right reason and not checked for going red for wrong ones."],
+     src:"specs/001-gridsweep-retro.md, Open items"},
     {t:"note", kind:"miss", body:"<b>Then a human opened the page and tried to play it.</b> Two defects, neither of them a defect against the spec: no visible legend of the keyboard controls, and the New game button sitting above the grid where nobody looks at the end of a game."}
   ],
-  notes: "Land the cost figures, then hand straight over to the closing card. Play the finished game one last time and ask the room to spot what is wrong with it - the answer is what nobody wrote down."
+  hold: 2600,
+  notes: "Three prompts landed in one commit here - the retro, the cost analysis, then folding the figures back in. Land the numbers, then the open item: the pass that closed one debt item quietly reintroduced the shape of another, and only the retro caught it. Then hand over to the closing card."
 }
 ];
 </script>
@@ -1040,6 +1191,25 @@ var STAGES = [
       c.appendChild(ul);
     } else if (p.t === "note") {
       c.appendChild(el("div", "callout" + (p.kind ? " " + p.kind : ""), p.body));
+    } else if (p.t === "quote") {
+      var q = el("div", "quote");
+      (Array.isArray(p.body) ? p.body : [p.body]).forEach(function (para) {
+        q.appendChild(el("p", null, para));
+      });
+      c.appendChild(q);
+      if (p.src) c.appendChild(el("div", "qsrc", p.src));
+    } else if (p.t === "human") {
+      var box = el("div", "decisions");
+      var ul = el("ul");
+      p.items.forEach(function (it) {
+        var li = el("li");
+        if (it.q) li.appendChild(el("span", "q", it.q));
+        li.appendChild(el("span", it.defer ? "defer" : "d", it.d));
+        ul.appendChild(li);
+      });
+      box.appendChild(ul);
+      c.appendChild(box);
+      if (p.src) c.appendChild(el("div", "qsrc", p.src));
     }
     side.appendChild(c);
     return c;
@@ -1057,15 +1227,16 @@ var STAGES = [
     var h = el("div", "turnhead");
     h.appendChild(el("span", "num", "TURN " + st.n));
     h.appendChild(el("span", "ttl", st.title));
-    if (st.skill) h.appendChild(el("span", null, "skill: " + st.skill));
+    if (st.skill) h.appendChild(el("span", "stagechip", "stage: " + st.skill));
+    else if (st.freeform) h.appendChild(el("span", "freechip", "no stage command · " + st.freeform));
     h.appendChild(el("span", "sha", st.sha));
     chat.appendChild(h);
     sideHead.textContent = st.actor === "human" ? "WHAT THE HUMAN PUT IN" : "WHAT CAME OUT";
     notesBody.innerHTML = st.notes || "";
   }
-  function startPrompt() {
+  function startPrompt(label) {
     var m = el("div", "msg");
-    m.appendChild(el("div", "who human", "DEVELOPER"));
+    m.appendChild(el("div", "who human", label || "DEVELOPER"));
     promptEl = el("div", "prompt", "<span class='caret'></span>");
     m.appendChild(promptEl);
     chat.appendChild(m);
@@ -1076,10 +1247,10 @@ var STAGES = [
     scroll();
   }
   function endPrompt() { promptEl.classList.add("done"); }
-  function handBeat(st) {
+  function handBeat(html, label) {
     var m = el("div", "msg");
-    m.appendChild(el("div", "who human", "DEVELOPER · NO AGENT TURN"));
-    m.appendChild(el("div", "handnote", st.hand));
+    m.appendChild(el("div", "who hand", label || "DEVELOPER · NO AGENT TURN"));
+    m.appendChild(el("div", "handnote", html));
     chat.appendChild(m);
     scroll();
   }
@@ -1187,20 +1358,42 @@ var STAGES = [
     var B = [];
     function add(ms, fn) { B.push({ ms: ms, fn: fn || null }); }
     add(T.head, function () { newTurn(st); });
-    if (st.prompt) {
-      add(T.promptStart, startPrompt);
-      chunks(st.prompt, 2).forEach(function (c) { add(T.type, function () { typeChunk(c); }); });
-      add(T.submit, endPrompt);
-    } else {
-      add(T.promptStart, function () { handBeat(st); });
+
+    // Some turns start with the developer editing an artifact by hand, before
+    // any prompt is sent. prompts.md records those; they are not agent work.
+    if (st.pre) {
+      add(T.promptStart, function () { handBeat(st.pre, "DEVELOPER · BY HAND, BEFORE PROMPTING"); });
+      add(1400, null);
+    }
+
+    // A turn is normally one prompt. Turn 13 is three, all landing in one
+    // commit, so a turn is modelled as a list of prompt/agent cycles.
+    var cycles = st.cycles || (st.prompt || st.think || st.tools
+      ? [{ prompt: st.prompt, think: st.think, tools: st.tools, say: null }]
+      : []);
+
+    if (!cycles.length && st.hand) {
+      add(T.promptStart, function () { handBeat(st.hand); });
       add(1500, null);
     }
-    if (st.think) {
-      add(T.thinkStart, startThink);
-      st.think.forEach(function (l) { add(T.think, function () { thinkLine(l); }); });
-      add(T.thinkEnd, endThink);
-    }
-    (st.tools || []).forEach(function (t) { add(T.tool, function () { toolLine(t); }); });
+
+    cycles.forEach(function (cy, ci) {
+      if (ci > 0) add(600, null);
+      if (cy.prompt) {
+        add(T.promptStart, function () { startPrompt(cycles.length > 1 ? "DEVELOPER · PROMPT " + (ci + 1) + " OF " + cycles.length : "DEVELOPER"); });
+        chunks(cy.prompt, cycles.length > 1 ? 4 : 2).forEach(function (c) {
+          add(cycles.length > 1 ? T.type * 0.7 : T.type, function () { typeChunk(c); });
+        });
+        add(T.submit, endPrompt);
+      }
+      if (cy.think) {
+        add(T.thinkStart, startThink);
+        cy.think.forEach(function (l) { add(T.think, function () { thinkLine(l); }); });
+        add(T.thinkEnd, endThink);
+      }
+      (cy.tools || []).forEach(function (tl) { add(T.tool, function () { toolLine(tl); }); });
+      if (cy.say) add(T.say, function () { sayLine(cy.say); });
+    });
     if (st.files && st.files.length) {
       add(T.fileHead, fileHead);
       st.files.forEach(function (f) { add(T.file, function () { fileLine(f); }); });
@@ -1454,6 +1647,92 @@ var STAGES = [
     if (b) selectTab(b.dataset.tab, STAGES[sheetStage]);
   });
   $("sheetclose").addEventListener("click", closeSheet);
+
+  /* --- resizable columns ---------------------------------------------------
+     The explorer and the detail panel are dragged; the transcript takes what is
+     left. Widths persist per browser, and a double-click on a grip resets it. */
+  var LAYOUT_KEY = "gridsweep-replay-layout";
+  var DEFAULTS = { L: 216, R: null };          // R null = the CSS default, 34%
+  var LIMITS = { Lmin: 150, Lmax: 460, Rmin: 280, Cmin: 320 };
+  var rootStyle = document.documentElement.style;
+
+  function applyLayout(v) {
+    if (v.L != null) rootStyle.setProperty("--wL", v.L + "px");
+    if (v.R != null) rootStyle.setProperty("--wR", v.R + "px");
+  }
+  function saveLayout(v) {
+    try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(v)); } catch (e) { /* private mode */ }
+  }
+  var layout = (function () {
+    try {
+      var raw = localStorage.getItem(LAYOUT_KEY);
+      if (raw) return Object.assign({}, DEFAULTS, JSON.parse(raw));
+    } catch (e) { /* private mode, or someone else's JSON */ }
+    return Object.assign({}, DEFAULTS);
+  })();
+  applyLayout(layout);
+
+  function widthOf(el2) { return el2.getBoundingClientRect().width; }
+
+  function dragGrip(grip, side) {
+    grip.addEventListener("pointerdown", function (e) {
+      e.preventDefault();
+      grip.setPointerCapture(e.pointerId);
+      grip.classList.add("dragging");
+      document.body.classList.add("resizing");
+      var area = document.querySelector(".stagearea");
+      var areaBox = area.getBoundingClientRect();
+
+      function move(ev) {
+        var total = areaBox.width;
+        var otherSide = side === "L" ? widthOf($("side")) : widthOf($("explorer"));
+        if (side === "L") {
+          var wl = ev.clientX - areaBox.left;
+          wl = Math.max(LIMITS.Lmin, Math.min(wl, LIMITS.Lmax, total - otherSide - LIMITS.Cmin - 14));
+          layout.L = Math.round(wl);
+        } else {
+          var wr = areaBox.right - ev.clientX;
+          wr = Math.max(LIMITS.Rmin, Math.min(wr, total - otherSide - LIMITS.Cmin - 14));
+          layout.R = Math.round(wr);
+        }
+        applyLayout(layout);
+      }
+      function up(ev) {
+        grip.releasePointerCapture(ev.pointerId);
+        grip.classList.remove("dragging");
+        document.body.classList.remove("resizing");
+        grip.removeEventListener("pointermove", move);
+        grip.removeEventListener("pointerup", up);
+        saveLayout(layout);
+      }
+      grip.addEventListener("pointermove", move);
+      grip.addEventListener("pointerup", up);
+    });
+
+    grip.addEventListener("dblclick", function () {
+      if (side === "L") { layout.L = DEFAULTS.L; rootStyle.setProperty("--wL", DEFAULTS.L + "px"); }
+      else { layout.R = null; rootStyle.removeProperty("--wR"); }
+      saveLayout(layout);
+    });
+
+    // Keyboard: the grips are real separators, so they move with the arrows.
+    grip.addEventListener("keydown", function (e) {
+      var step = e.shiftKey ? 48 : 16;
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      e.preventDefault();
+      e.stopPropagation();
+      var dir = e.key === "ArrowLeft" ? -1 : 1;
+      if (side === "L") {
+        layout.L = Math.max(LIMITS.Lmin, Math.min(LIMITS.Lmax, (layout.L || widthOf($("explorer"))) + dir * step));
+      } else {
+        layout.R = Math.max(LIMITS.Rmin, (layout.R || widthOf($("side"))) - dir * step);
+      }
+      applyLayout(layout);
+      saveLayout(layout);
+    });
+  }
+  dragGrip($("gripL"), "L");
+  dragGrip($("gripR"), "R");
 
   /* --- wiring ------------------------------------------------------------- */
   $("playpause").addEventListener("click", toggle);
