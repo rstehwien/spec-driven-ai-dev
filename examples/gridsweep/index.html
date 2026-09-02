@@ -1,30 +1,37 @@
 <!doctype html>
+<html lang="en">
+<head>
 <meta charset="utf-8">
-<title>Gridsweep — Phase 01 dual-load check</title>
-<h1>Gridsweep — Phase 01 dual-load check</h1>
-<p>
-  This stub exists only to prove <code>board.js</code> loads as a classic script
-  from <code>file://</code>. Phase 03 replaces the body with the real grid.
-</p>
-<pre id="dump">board.js did not load.</pre>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gridsweep</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main class="game">
+  <h1>Gridsweep</h1>
+
+  <div class="hud">
+    <p class="counter">
+      Mines remaining: <span id="mines-remaining">10</span>
+    </p>
+    <button type="button" id="new-game">New game</button>
+  </div>
+
+  <!-- The status line is the only announcement the spec allows: no separate
+       live region reports cascades or game end. -->
+  <p id="status" class="status" role="status"></p>
+
+  <div
+    id="board"
+    class="board"
+    role="grid"
+    aria-label="Gridsweep board, 8 rows by 8 columns"
+  ></div>
+</main>
+
+<!-- Classic scripts, in order. A page opened over file:// refuses module
+     scripts, so neither file may ever become type="module". -->
 <script src="board.js"></script>
-<script>
-  (function () {
-    var snapshot = Gridsweep.createGame().snapshot();
-    var lines = [
-      snapshot.rows + 'x' + snapshot.columns + ' board, ' +
-        snapshot.mineCount + ' mines',
-      '',
-    ];
-    snapshot.cells.forEach(function (row) {
-      lines.push(
-        row
-          .map(function (cell) {
-            return cell.mine ? '*' : String(cell.adjacent);
-          })
-          .join(' '),
-      );
-    });
-    document.getElementById('dump').textContent = lines.join('\n');
-  })();
-</script>
+<script src="ui.js"></script>
+</body>
+</html>

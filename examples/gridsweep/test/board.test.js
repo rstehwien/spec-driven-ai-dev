@@ -378,3 +378,83 @@ test('out-of-bounds coordinates are ignored', () => {
 
   assert.deepEqual(game.snapshot(), before);
 });
+
+// ---------------------------------------------------------------------------
+// Phase 03: grid rendering and accessibility structure.
+//
+// The tests never load ui.js -- it is DOM code and there is no DOM here. What
+// they can do, and what review cannot do reliably, is hold the delivery
+// constraints that only break when index.html is double-clicked: a module
+// script silently refusing to load over file://, a stylesheet or font quietly
+// pulled from the network, or the page losing an element the renderer needs.
+// ---------------------------------------------------------------------------
+
+const readProjectFile = (name) =>
+  fs.readFileSync(path.join(__dirname, '..', name), 'utf8');
+
+test('ui.js is free of ES module syntax', () => {
+  const source = readProjectFile('ui.js');
+
+  assert.ok(!/^\s*import\s/m.test(source), 'ui.js must not use import');
+  assert.ok(!/^\s*export\s/m.test(source), 'ui.js must not use export');
+  assert.ok(
+    !/\bimport\s*\(/.test(source),
+    'ui.js must not use dynamic import',
+  );
+});
+
+test('the test suite never loads ui.js', () => {
+  const loaded = Object.keys(require.cache).filter((file) =>
+    file.endsWith(`${path.sep}ui.js`),
+  );
+
+  assert.deepEqual(loaded, [], 'ui.js must stay out of the test runner');
+});
+
+// HTML comments cannot make the browser load anything, but they can mention
+// the very syntax these scans forbid, so strip them before matching.
+const withoutHtmlComments = (html) => html.replace(/<!--[\s\S]*?-->/g, '');
+
+test('index.html loads board.js then ui.js as classic scripts', () => {
+  const html = withoutHtmlComments(readProjectFile('index.html'));
+
+  assert.ok(
+    !/type\s*=\s*["']module["']/.test(html),
+    'index.html must not use type="module"; file:// blocks module scripts',
+  );
+
+  const boardAt = html.indexOf('src="board.js"');
+  const uiAt = html.indexOf('src="ui.js"');
+  assert.ok(boardAt !== -1, 'index.html must load board.js');
+  assert.ok(uiAt !== -1, 'index.html must load ui.js');
+  assert.ok(boardAt < uiAt, 'board.js must load before ui.js');
+});
+
+test('nothing the browser loads reaches the network', () => {
+  for (const name of ['index.html', 'ui.js', 'styles.css']) {
+    const source = withoutHtmlComments(readProjectFile(name));
+    assert.ok(
+      !/\bhttps?:\/\//.test(source),
+      `${name} must not reference an absolute http(s) URL`,
+    );
+    assert.ok(
+      !/(?:src|href)\s*=\s*["']\/\//.test(source),
+      `${name} must not reference a protocol-relative URL`,
+    );
+  }
+});
+
+test('index.html links the stylesheet and provides the elements ui.js renders into', () => {
+  const html = readProjectFile('index.html');
+
+  assert.ok(
+    /<link[^>]+href="styles\.css"/.test(html),
+    'index.html must link styles.css',
+  );
+  for (const id of ['status', 'mines-remaining', 'new-game', 'board']) {
+    assert.ok(
+      new RegExp(`id="${id}"`).test(html),
+      `index.html must contain an element with id="${id}"`,
+    );
+  }
+});

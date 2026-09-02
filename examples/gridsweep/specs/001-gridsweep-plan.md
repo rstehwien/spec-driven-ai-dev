@@ -140,18 +140,18 @@ Goal: render the real board from a state snapshot, with the accessible grid
 structure and stylesheet the spec requires.
 
 ### Tasks
-- [ ] Replace the Phase 01 stub `index.html` with the real page: a status area,
+- [x] Replace the Phase 01 stub `index.html` with the real page: a status area,
       a remaining-mines counter, a "New game" button, and the board container.
-- [ ] Create `ui.js` holding all DOM code, loaded as a classic script after
+- [x] Create `ui.js` holding all DOM code, loaded as a classic script after
       `board.js`, never required by tests.
-- [ ] Render the board as `role="grid"` with rows and cells, roving `tabindex`
+- [x] Render the board as `role="grid"` with rows and cells, roving `tabindex`
       so exactly one cell is tabbable, and an `aria-label` per cell describing
       its state.
-- [ ] Create `styles.css` with classic per-digit colours for 1-8, blank
+- [x] Create `styles.css` with classic per-digit colours for 1-8, blank
       zero-count cells, and a clearly visible focus outline on the cursor cell.
-- [ ] Verify by hand in the browser that hidden, revealed-digit, revealed-blank,
+- [x] Verify by hand in the browser that hidden, revealed-digit, revealed-blank,
       and marked cells all render distinctly.
-- [ ] Run `node --test` to confirm the logic suite is unaffected.
+- [x] Run `node --test` to confirm the logic suite is unaffected.
 
 ### Acceptance criteria
 - The page renders an 8x8 grid from the snapshot with correct digits and blank
@@ -329,7 +329,84 @@ the spec end to end.
     against out-of-bounds coordinates and return an unchanged snapshot, with a
     test. This keeps Phase 04's arrow-key edge handling from being the only
     thing standing between the UI and an exception.
-- Phase 03: not started.
+- Phase 03: complete (2026-09-01). Built red/green.
+  - Files created: `ui.js`, `styles.css`. Files changed: `index.html` (Phase 01
+    stub replaced with the real page), `test/board.test.js` (5 tests appended).
+  - Red: the five new tests were written and run before `ui.js` or
+    `styles.css` existed. Four failed -- `ENOENT` on `ui.js`, no `src="ui.js"`
+    in `index.html`, no `styles.css` to scan, no stylesheet link or renderer
+    element ids. The fifth ("the test suite never loads ui.js") passes
+    trivially by design; it is a regression guard, not a red test.
+  - Green: `node --test` reports `pass 32 / fail 0` and exits `0` (27 prior
+    tests plus the 5 new ones). `board.js` was not touched this phase.
+  - What the tests can and cannot cover: `ui.js` is DOM code and the suite has
+    no DOM, so the spec's "never loaded by the tests" rule holds and rendering
+    itself is verified in the browser, below. What the suite now does hold are
+    the delivery constraints that only fail when `index.html` is
+    double-clicked: no `type="module"` and no ES module syntax anywhere the
+    browser loads, `board.js` loading before `ui.js`, no absolute or
+    protocol-relative URL in `index.html` / `ui.js` / `styles.css`, the
+    stylesheet actually linked, the four element ids the renderer writes into
+    present, and `require.cache` free of `ui.js` after a full run.
+  - One of those scans initially failed on an HTML comment in `index.html`
+    that named `type="module"` while warning against it. A comment cannot make
+    the browser load a module, so the scan now strips HTML comments before
+    matching rather than the comment being reworded to appease it.
+  - Risk called out in this phase's Risks section, now decided: cells are built
+    once and updated in place (className, textContent, `aria-label`,
+    `tabindex`) rather than rebuilt per render. Rebuilding would destroy the
+    focused element mid-keystroke and drop focus to `<body>`, which is exactly
+    the roving-tabindex trap; updating in place keeps the cursor cell alive
+    across every re-render Phase 04 will trigger.
+  - Structure: `#board` is `role="grid"`, holding 8 `role="row"` divs of 8
+    `role="gridcell"` divs. Verified in Chrome over
+    `file:///Users/res/gridsweep-demo/index.html` via `--dump-dom`: 64
+    gridcells, 8 rows, 1 grid, exactly one `tabindex="0"` (at (0,0)), every
+    cell carrying an `aria-label`, counter reading `10`, status empty, and no
+    mine glyph anywhere in the initial DOM.
+  - Render states verified in the browser with a throwaway probe page that
+    installed `window.onerror`, a capturing `error` listener, and
+    `console.error` / `console.warn` shims before `board.js` and `ui.js`
+    loaded, then drove one game through every state the renderer paints. The
+    probe was deleted afterwards and is not part of the deliverable. Results:
+    - hidden: `cell hidden`, empty text, raised `outset` border on the darker
+      face, label `Row 8, column 1, hidden`
+    - marked: `cell hidden marked`, glyph `⚑` in red on the hidden face
+    - revealed blank (cascade interior, count 0): `cell revealed`, empty text,
+      flat `solid` border on the lighter face, label `Row 1, column 1, empty`
+    - revealed digit: `cell revealed count-1`, text `1`, blue, label `Row 3,
+      column 1, 1 adjacent mine`; and `count-2` green at the cascade border,
+      label `Row 2, column 6, 2 adjacent mines`
+    - revealed mine: `cell revealed mine`, glyph `✹` on a distinct pink face
+    - all eight digit colours read off the live stylesheet and confirmed
+      distinct (1 blue, 2 green, 3 red, 4 navy, 5 maroon, 6 teal, 7 black,
+      8 grey)
+  - Roving `tabindex` verified live: after moving the cursor to (3,3), exactly
+    one of the 64 cells had `tabindex="0"`, it was (3,3), it was
+    `document.activeElement`, and its focus outline computed to `3px solid`.
+  - Console was clean: the probe's captured event list came back empty, so no
+    page error, no failed subresource, and no module or CORS failure. Chrome's
+    own stderr carries `CVDisplayLinkCreateWithCGDisplay` noise on macOS
+    headless; that is the browser's display layer, not the page.
+  - Hidden cells leak nothing. `snapshot()` still carries `mine` on every cell
+    (Phase 05 needs it to open the board at game end), so `ui.js` is the
+    boundary that keeps it out of the DOM: a hidden cell over a mine rendered
+    as plain `cell hidden` with empty text and a `hidden` label, identical to
+    any other hidden cell. This is the answer to the question left open at the
+    Phase 02 gate -- the snapshot shape was kept, and the containment moved to
+    the renderer.
+  - The remaining-mines counter is rendered here rather than deferred, because
+    it is derived from the snapshot like everything else on the page: it read
+    `9` after one mark was placed. Phase 04 only has to keep calling `refresh`.
+  - Deliberately not done, per this phase's Out of scope: no input is wired, so
+    arrow keys, `Enter` / `Space`, `F`, clicks, and the "New game" button are
+    inert markup for now (Phase 04), and the status line stays empty because
+    win and loss messages are Phase 05.
+  - Small addition beyond the plan's task list: `ui.js` exposes
+    `globalThis.GridsweepUI = { game, refresh, setCursor }`. It is what made
+    the probe above possible with no input wired, and it is the documented
+    console fast path the Phase 05 note asks for so a win can be checked
+    without clicking 54 cells.
 - Phase 04: not started.
 - Phase 05: not started.
 
@@ -344,22 +421,30 @@ the spec end to end.
 
 ## User gate
 
-- Phase 02 is implemented and awaiting your review. Review `board.js` and the
-  20 new tests at the bottom of `test/board.test.js`, and run `node --test`
-  yourself to watch all 27 pass.
-- Worth deciding before Phase 03 builds a renderer on this shape:
-  - The plan's "win with all ten marks placed on safe cells" test is
-    unsatisfiable as literally written; see the Phase 02 deviation note above
-    for what was tested instead. If you read the spec's "or with all ten placed
-    wrongly" differently -- for example that a marked cell should be revealable
-    by a direct reveal once the game is otherwise won -- say so now.
-  - `snapshot()` still exposes `mine` on hidden cells. This was raised at the
-    Phase 01 gate and left as-is. Phase 05 needs mine positions to reveal all
-    mines at game end, so the simplest path keeps it; if you would rather the
-    snapshot withhold `mine` until a cell is revealed or the game ends, Phase
-    03 is the last cheap moment to change it.
-- This is a good point for a checkpoint commit before Phase 03 starts on the
-  UI.
+- Phase 03 is implemented and awaiting your review. Review `index.html`,
+  `ui.js`, `styles.css`, and the 5 tests at the bottom of
+  `test/board.test.js`, run `node --test` yourself to watch all 32 pass, and
+  open `index.html` from Finder to see the grid.
+- What you cannot see yet, by design: nothing is clickable and no key does
+  anything. Phase 03 renders; Phase 04 wires input. The "New game" button and
+  the status line are present but inert.
+- Two questions from the Phase 02 gate that you moved past without answering.
+  Neither blocked this phase, and both were resolved in the direction the gate
+  recommended, but they are still yours to overturn:
+  - `snapshot()` still exposes `mine` on hidden cells. Rather than change the
+    snapshot, `ui.js` now holds the line: a hidden cell over a mine renders
+    byte-identically to any other hidden cell, verified in the browser. If you
+    still want the snapshot itself to withhold `mine`, say so -- it is a
+    `board.js` change plus a renderer tweak, and it gets more expensive once
+    Phase 05 starts reading `mine` to open the board at game end.
+  - The Phase 02 reading of "win with all ten marks placed wrongly" stands
+    unchanged; nothing in this phase depended on it.
+- One judgement call worth a look: the status line is `role="status"`, a live
+  region. The spec says there are "no live-region announcements of cascades or
+  game end beyond the status text itself", which reads as permitting exactly
+  this one. Without it a screen reader user is never told they won. Say so if
+  you read that sentence as forbidding it.
+- This is a good point for a checkpoint commit before Phase 04 wires input.
 - Next stage if approved:
   `Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-gridsweep-plan.md`
 - If you want AI-assisted formal review of this phase first:
