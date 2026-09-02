@@ -1,5 +1,8 @@
 # Questions for Spec 001-gridsweep
 
+Status: resolved. All 15 questions were answered and folded into
+`specs/001-gridsweep-spec.md` on 2026-09-01. Kept as clarification history.
+
 ## Repo Context Checked
 
 - `specs/001-gridsweep-spec.md`: the only content in the repository.

@@ -7,3 +7,9 @@ Generated specs/001-gridsweep-questions-01.md
 
 #2 
 Answered questions, no prompt
+
+#3
+```
+Use the human-gated-spec-driven-ai-development skill to fold-questions from 001-gridsweep-questions-01.md into 001-gridsweep-spec.md
+```
+Folded answers into spec.
