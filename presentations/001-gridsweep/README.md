@@ -107,6 +107,45 @@ Needs git, node, python3 and Google Chrome. It rebuilds `shots/`, `game/` and
 so it is safe to delete and rebuild. Change a stage's screenshot by editing the
 `shot` lines in the script rather than by editing a PNG.
 
+## Two process details the replay makes visible
+
+**Every turn ran in a fresh session.** A rule beneath each turn header reads
+`SESSION nn OF 12 · FRESH CONTEXT`. Nothing carried over in conversation between
+turns, because nothing needed to — the spec, the plan and its checklist state
+are on disk. The retro counts twelve sessions across the run, and there are
+exactly twelve turns with an agent in them. Turn 13 is the single exception and
+says so: three prompts, one session.
+
+**Almost none of the prompts were written by hand.** Most agent turns end by
+*writing the next prompt* into the `## User gate` section of the artifact they
+just produced, and the replay shows that where it happens — a green
+**SUGGESTED NEXT STEP** block at the end of the turn, with the prompt in it. The
+one the developer went on to run is highlighted amber, because it is about to
+reappear as the next turn's prompt box. Options that were offered and not taken
+are shown dimmed beside it.
+
+Every block is checked against the artifact as it stood at that commit:
+
+- **Turn 01** is the only prompt written from nothing.
+- **Turns 03–11** were each handed over by the previous turn. Turn 04's is the
+  odd one: the folded spec is the single artifact with no User gate, so that
+  suggestion lived only in the agent's reply — in the transcript, which is
+  exactly what this workflow treats as disposable.
+- **Turn 09** offers two, and the unused one is `review-phase` — a real stage
+  command this project never ran. **Turn 10** offers two as well, and its
+  untaken branch is the 002 cycle.
+- **Turns 11 and 12** end with *NO NEXT PROMPT SUGGESTED*. Turn 11 points at
+  *"the natural next pass"* but writes no prompt, so naming debt items 1 and 3 —
+  and adding the `must not add npm packages` constraint — was the developer's
+  judgement. Those turns' prompts carry an amber *written by the developer* line
+  instead.
+- **Turn 13** was nobody's suggestion, and still ends by writing two prompts of
+  its own. Neither has been run; one of them is where cycle 002 starts.
+
+Turn 11 is worth being precise about: its prompt **was** handed over, verbatim,
+in the final review's own *Example prompts* block. It is the last one the run
+suggests.
+
 ## Stage commands, and the turns that are not one
 
 The header chip on each turn is green for the five of the skill's seven stage

@@ -96,6 +96,21 @@ body.resizing iframe { pointer-events: none; }
 .turnhead .sha { margin-left: auto; color: var(--faint); }
 .turnhead .sha::before { content: "commit "; color: #4d574f; }
 
+.session {
+  display: flex; align-items: center; gap: 10px; margin: 0 0 16px;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; color: var(--faint);
+  opacity: 0; animation: fadein .4s ease forwards;
+}
+.session::before, .session::after { content: ""; height: 1px; background: var(--line); flex: 1; }
+.session::before { max-width: 18px; }
+.session b { color: var(--file); font-weight: 400; letter-spacing: .08em; }
+.session i { font-style: normal; color: var(--faint); letter-spacing: 0; text-transform: none; font-size: 11px; }
+
+.psrc { margin: 6px 0 16px; font-family: var(--mono); font-size: 10.5px; line-height: 1.5; color: var(--faint); }
+.psrc.own { color: var(--human); }
+.psrc.own::before { content: "\270E\00A0\00A0written by the developer\00A0\00B7\00A0"; }
+.psrc span { color: var(--faint); }
+
 .msg { margin: 0 0 14px; }
 .who { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; margin-bottom: 5px; }
 .who.human { color: var(--human); }
@@ -146,6 +161,27 @@ body.resizing iframe { pointer-events: none; }
 .gate .g-h { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; color: var(--human); margin-bottom: 6px; }
 .gate .g-b { font-size: 13.5px; color: #EFE0CE; }
 
+/* The last thing most agent turns do is write the next prompt. */
+.handover {
+  margin: 4px 0 16px; border: 1px solid var(--line); border-left: 2px solid var(--ai);
+  border-radius: 0 6px 6px 0; background: var(--ai-soft); padding: 11px 13px;
+  opacity: 0; animation: fadein .4s ease forwards;
+}
+.handover .ho-h { font: 400 10.5px/1.5 var(--mono); letter-spacing: .1em; color: var(--ai); margin-bottom: 9px; }
+.handover .ho-h span { color: var(--faint); letter-spacing: .03em; }
+.ho-p {
+  margin: 0 0 8px; padding: 9px 11px; border-radius: 4px; background: var(--bg);
+  border: 1px dashed var(--line); font-family: var(--mono); font-size: 12px;
+  line-height: 1.55; color: #8E9A93; white-space: pre-wrap; word-break: break-word;
+}
+.ho-p:last-of-type { margin-bottom: 0; }
+.ho-p.taken { border: 1px solid var(--human); background: var(--human-soft); color: #F0DFCC; }
+.ho-tag { display: block; margin-bottom: 6px; font-size: 9.5px; letter-spacing: .11em; color: var(--faint); }
+.ho-p.taken .ho-tag { color: var(--human); }
+.ho-n { margin-top: 10px; font-size: 12.5px; line-height: 1.5; color: #BFC9C3; }
+.handover.none { border-left-color: var(--human); background: transparent; }
+.handover.none .ho-h { color: var(--human); }
+
 /* ---------- turn-complete bar ---------- */
 .turnend {
   margin: 20px 0 8px; border: 1px solid var(--ai); border-radius: 7px;
@@ -191,7 +227,7 @@ body.resizing iframe { pointer-events: none; }
 .doc pre .ad { color: var(--ai); }
 .doc pre .rm { color: var(--bad); }
 
-.term { border: 1px solid var(--line); border-radius: 6px; background: #090C0A; padding: 10px 12px; font-family: var(--mono); font-size: 11.5px; line-height: 1.7; color: #B9C4BC; }
+.term { border: 1px solid var(--line); border-radius: 6px; background: #090C0A; padding: 10px 12px; font-family: var(--mono); font-size: 11.5px; line-height: 1.7; color: #B9C4BC; white-space: pre-wrap; }
 .term .cmd { color: var(--ink); }
 .term .cmd::before { content: "$ "; color: var(--ai); }
 .term .pass { color: var(--ai); }
@@ -526,6 +562,7 @@ var STAGES = [
 {
   n: "01", sha: "3087d07", title: "review-spec", actor: "ai", skill: "review-spec", game: null,
   prompt: "Use the human-gated-spec-driven-ai-development skill to review-spec for #file:specs/001-gridsweep-spec.md.",
+  psrc: {own:true, why:"nothing preceded it \u2014 the only prompt in the run with no turn behind it"},
   think: [
     "Loading skill: human-gated-spec-driven-ai-development",
     "Checking repo context - no code, no plan, spec only",
@@ -558,6 +595,11 @@ var STAGES = [
      src:"specs/001-gridsweep-questions-01.md, question 1"},
     {t:"note", body:"Every question carries a proposed fallback <i>and</i> that costing. <b>The agent did not invent a win condition and carry on &mdash; it refused to guess, and priced the guess.</b>"}
   ],
+  next: {
+    where: "written into specs/001-gridsweep-questions-01.md \u00b7 User gate",
+    options: [{taken:true, text:"Use the human-gated-spec-driven-ai-development skill to fold-questions from 001-gridsweep-questions-01.md into 001-gridsweep-spec.md"}],
+    note: "The developer answers the fifteen questions by hand first &mdash; that is the next turn &mdash; and only then pastes this into an empty session."
+  },
   notes: "The payoff turn of the demo. The agent found the hole in the spec without being told there was one. Open 'What changed' and read a couple of the fifteen aloud - the room will recognise most of them as arguments they have had."
 },
 {
@@ -601,9 +643,19 @@ var STAGES = [
       ["Win condition", "defined", "hi"],
       ["Questions still open", "0", ""]
     ]},
+    {t:"quote", h:"ONE PROMPT WRITTEN, TWELVE SESSIONS RUN",
+     body:["Watch how each agent turn ends. <b>It writes the next prompt</b>, into the <code>## User gate</code> section of the artifact it just produced &mdash; and the prompt box at the top of the next turn is that text, pasted in. <b>The developer wrote exactly one prompt from nothing:</b> turn 01.",
+           "And each of those turns ran in <b>a fresh session with the context cleared</b>. Nothing carried over in the conversation, because nothing needed to: the spec, the plan and its checklist state are on disk. <b>The retro counts twelve sessions across the run &mdash; one for each of the twelve turns with an agent in it.</b>",
+           "That is the whole bet of the workflow. Chat is disposable; the artifacts are not."],
+     src:"specs/001-gridsweep-questions-01.md, User gate \u00b7 and specs/001-gridsweep-retro.md, Time"},
     {t:"note", body:"This is the last turn at which changing your mind is free. From here the spec is the only artifact the plan reads, and <b>nothing downstream ever opens the questions file again</b> &mdash; it survives as the record of who decided what."}
   ],
-  notes: "Worth saying out loud: the agent edits the spec, but only with answers a human wrote. It never resolves its own question. The diff is the most instructive one in the run - every added line traces to a decision in the previous turn."
+  next: {
+    where: "in its closing reply only",
+    options: [{taken:true, text:"Use the human-gated-spec-driven-ai-development skill to generate-plan for 001-gridsweep-spec.md"}],
+    note: "<b>The one handover in the run that was not written to a file.</b> The folded spec is the only artifact with no <code>## User gate</code>, so this suggestion lived in the transcript &mdash; exactly the thing this workflow treats as disposable."
+  },
+  notes: "Two things to draw out here. The agent edits the spec, but only with answers a human wrote - it never resolves its own question. And scroll back one turn to the green SUGGESTED NEXT STEP block: the amber prompt at the top of this turn is that text, pasted into an empty session. Ask the room how many prompts they think were written by hand in the whole run. The answer is one, so far, and three more at the very end."
 },
 {
   n: "04", sha: "d1b7a4d", title: "generate-plan", actor: "ai", skill: "generate-plan", game: null,
@@ -640,6 +692,11 @@ var STAGES = [
      src:"specs/001-gridsweep-plan.md, Handoff notes"},
     {t:"note", body:"That second line is the plan admitting a hole in itself on the day it was written. <b>It becomes debt item 1, and it takes two more turns and $10.70 to close.</b>"}
   ],
+  next: {
+    where: "written into specs/001-gridsweep-plan.md \u00b7 User gate \u2192 &ldquo;Next stage if approved&rdquo;",
+    options: [{taken:true, text:"Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-gridsweep-plan.md"}],
+    note: "The plan rewrites this same gate after every phase, which is why one prompt runs all five of them."
+  },
   hold: 2400,
   notes: "The pause here is the point of the whole workflow. Four turns, zero code, and the expensive disagreements have already happened in a text file that costs nothing to change. Good place to stop and take questions."
 },
@@ -675,6 +732,11 @@ var STAGES = [
      src:"specs/001-gridsweep-plan.md, Phase 01 evidence"},
     {t:"shot", h:"THE PAGE AT THIS COMMIT", img:"01-stub.png", cap:"Phase 01 ships a dual-load check, not a game — it prints the computed adjacency grid to prove the logic loaded."}
   ],
+  next: {
+    where: "written into specs/001-gridsweep-plan.md \u00b7 User gate \u2192 &ldquo;Next stage if approved&rdquo;",
+    options: [{taken:true, text:"Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-gridsweep-plan.md"}],
+    note: "Character for character the same prompt as the last turn, and as the next three. The plan advanced itself; the conversation did not have to."
+  },
   notes: "Two things. Phase one produces something nobody would call a game - that is what a bounded phase looks like. And the phase reports its own deviation rather than quietly complying: the retro names that habit as the thing that made the final review fast."
 },
 {
@@ -709,6 +771,10 @@ var STAGES = [
     {t:"note", body:"The plan records the failure message, not just &ldquo;tests written first&rdquo;. <b>That is the difference between claiming red/green and evidencing it</b> &mdash; and it is the thing a reviewer six months later can actually check."},
     {t:"note", body:"The win condition from question 1 is now a predicate in <b>board.js</b> with tests asserting it. Trace it back: <b>agent asked &rarr; human decided &rarr; spec recorded &rarr; plan scheduled &rarr; test proves.</b>"}
   ],
+  next: {
+    where: "written into specs/001-gridsweep-plan.md \u00b7 User gate \u2192 &ldquo;Next stage if approved&rdquo;, rewritten for this phase",
+    options: [{taken:true, text:"Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-gridsweep-plan.md"}]
+  },
   notes: "Open 'What changed' and scroll to board.js: the win predicate is right there, and it ignores flags because question 2 said so. Then ask the room how they would find that out six months later on a normal project."
 },
 {
@@ -742,6 +808,10 @@ var STAGES = [
     {t:"note", body:"<b>board.js</b> still has no idea the DOM exists, and <b>ui.js</b> still has no idea what the rules are. That split was a spec decision, made at question 3, and the final review will call it the strongest piece of design in the project."},
     {t:"note", kind:"miss", body:"Note where the <b>New game</b> button landed: in the HUD, above the grid, next to the counter. It went there because that is where the counter was. <b>The spec said the button exists and what it does. It never said where.</b> Nothing in the next ten turns questions it."}
   ],
+  next: {
+    where: "written into specs/001-gridsweep-plan.md \u00b7 User gate \u2192 &ldquo;Next stage if approved&rdquo;, rewritten for this phase",
+    options: [{taken:true, text:"Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-gridsweep-plan.md"}]
+  },
   notes: "Open 'Play the game' and click a cell in front of the room. Nothing happens, and that is correct: the phase boundary is real, not a slide. Then point at the New game button - it is one of the two things the whole process fails to catch."
 },
 {
@@ -777,6 +847,10 @@ var STAGES = [
            "A criterion can be satisfied and still not mean what it appears to promise."],
      src:"specs/001-gridsweep-retro.md, What the process missed"}
   ],
+  next: {
+    where: "written into specs/001-gridsweep-plan.md \u00b7 User gate \u2192 &ldquo;Next stage if approved&rdquo;, rewritten for this phase",
+    options: [{taken:true, text:"Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-gridsweep-plan.md"}]
+  },
   notes: "Stop here and hand the keyboard to someone who has not seen the spec. They will not know that F marks a cell, because nothing on the page says so. This is the strongest single moment in the deck."
 },
 {
@@ -813,6 +887,15 @@ var STAGES = [
            "The rule the spec actually means &mdash; the win check never consults marks &mdash; is covered by three tests instead."],
      src:"specs/001-gridsweep-plan.md, Phase 05 evidence"}
   ],
+  next: {
+    where: "written into specs/001-gridsweep-plan.md \u00b7 User gate",
+    options: [
+      {text:"Use the human-gated-spec-driven-ai-development skill to review-phase for 001-gridsweep-plan.md",
+       tag:"OFFERED, NOT TAKEN \u00b7 review-phase never ran in this project"},
+      {taken:true, text:"Use the human-gated-spec-driven-ai-development skill to final-review for 001-gridsweep-plan.md"}
+    ],
+    note: "Two options, because Phase 05 was the last one. <code>review-phase</code> is one of the seven stage commands and this run never used it &mdash; each phase's acceptance walk stood in for it."
+  },
   hold: 2600,
   notes: "Two points. The phase prompt never changed across five turns - the state lives in the plan file, not the conversation. And the plan asked for an impossible test; the phase did not write it and said why. An agent that had quietly written something green instead is the failure mode this evidence trail exists to catch."
 },
@@ -854,6 +937,14 @@ var STAGES = [
     ]},
     {t:"note", body:"Imp. 1 is a debug hook the agent added in Phase 04 and then flagged in Phase 05, and its own comment for it turned out to contradict the Phase 05 evidence. <b>The review is adversarial about the reviewer's own work</b>, which is why it is a separate turn and not a paragraph at the end of a phase."}
   ],
+  next: {
+    where: "written into specs/001-gridsweep-final-review.md \u00b7 User gate \u2192 &ldquo;Example prompts&rdquo;",
+    options: [
+      {taken:true, text:"Use the human-gated-spec-driven-ai-development skill to make a bounded improvement pass for 001-gridsweep-plan.md covering the Important improvements and Cleanup opportunities in 001-gridsweep-final-review.md"},
+      {text:"Use the human-gated-spec-driven-ai-development skill to review-spec for specs/002-spec.md"}
+    ],
+    note: "<b>The last handover in the run.</b> Everything after the next turn, the developer writes."
+  },
   notes: "No code changed this turn - 'Play the game' still shows Phase 05. The point is the 240 lines: the agent arguing with itself, in a file the human is about to annotate. Do not advance until the room has seen that it found its own dead code. If anyone is counting stage commands: this run used five of the skill's seven. `generate-questions` was not needed because `review-spec` produced the questions artifact directly, and `review-phase` was folded into the acceptance walk at the end of each phase - defensible on a project this size, and the first thing to add back on a real one."
 },
 {
@@ -908,13 +999,15 @@ var STAGES = [
            "So the prompt is a plain request that the skill maps onto the artifacts it already has. The same is true of the retro two turns from now: <b>there is no retro command.</b>"],
      src:"skills/human-gated-spec-driven-ai-development/SKILL.md"}
   ],
-  notes: "This is the turn to slow down on. The right panel is the human half of the loop: findings answered where they were written, two of them deferred on purpose. Then show that the pass honoured the deferral rather than helpfully overreaching - and that this cost a whole extra turn. Note the chip in the header is amber, not green: from here to the end, no turn is a stage command."
+  next: {none: "The pass records that debt items 1 and 3 are &ldquo;the natural next pass&rdquo; &mdash; but it writes no prompt for them. <b>From here the developer is composing the prompts again.</b>"},
+  notes: "This is the turn to slow down on. The right panel is the human half of the loop: findings answered where they were written, two of them deferred on purpose. Then show that the pass honoured the deferral rather than helpfully overreaching - and that this cost a whole extra turn. Two things to name: the header chip is amber, so this is not a stage command; and this prompt was still handed over, verbatim, by the previous turn. It is the last one. Scroll to the end of this turn and the handover block is gone."
 },
 {
   n: "12", sha: "ce6e028", title: "Improvement pass 02", actor: "ai",
   freeform: "bounded improvement cycle", game: "ce6e028", gameKind: "live",
   pre: "Pass 01 left debt items 1 and 3 open by name. Closing them needs a second prompt that <em>names them</em> &mdash; and adds the constraint the first pass would otherwise have had to guess.",
   prompt: "Use the human-gated-spec-driven-ai-development skill to make a bounded improvement pass for 001-gridsweep-plan.md covering technical debt items 1 and 3 in 001-gridsweep-final-review.md\n\nItem 1 must not add npm packages or break `node --test` where Chrome is absent.",
+  psrc: {own:true, why:"turn 11 said only &ldquo;the natural next pass&rdquo;. Naming the two items, and the npm constraint, is the developer's"},
   think: [
     "Scope is exactly two named debt items - the pass may not widen",
     "Item 1 needs renderer coverage, and the spec forbids installing Playwright",
@@ -956,14 +1049,17 @@ var STAGES = [
      src:"specs/001-gridsweep-retro.md, What went well"},
     {t:"note", body:"The retro argues the constraint was <b>half right</b>: the delivery constraint (no build, no install, opens over <code>file://</code>) was correct and still holds. The <b>therefore no dev dependencies</b> that got smuggled in behind it never justified itself &mdash; and test tooling never ships."}
   ],
-  notes: "The most expensive turn in the project, and the one that best shows the trade-off. Two things to land: the mutation table is what turns 'we added tests' into evidence, and the process faithfully executed a decision the retro then argues was wrong. Gates enforce decisions; they do not make them good."
+  next: {none: "Nothing. The pass reports the debt register closed and stops."},
+  notes: "The most expensive turn in the project, and the one that best shows the trade-off. Note the amber line under the prompt: the chain of handed-over prompts ended with turn 11, and this one is the developer's, naming the two items and adding the npm constraint that pass 01 would otherwise have had to guess. Then land the mutation table - it is what turns 'we added tests' into evidence - and the fact that the process faithfully executed a decision the retro then argues was wrong. Gates enforce decisions; they do not make them good."
 },
 {
   n: "13", sha: "ac5be2e", title: "The retro &middot; three prompts, one commit", actor: "ai", freeform: "plain request",
+  sessionNote: "the one turn that is a conversation \u2014 three prompts, no reset between them",
   game: "ce6e028", gameKind: "live",
   cycles: [
     {
       prompt: "Write a retro of the demo project in specs/001-gridsweep-retro.md .  Include the information on what you suggest above.  Also evaluate if doing things without a package.json and using some standard tools and layout for development was better than doing things a standard way.  I thought the project would be stimpler than it was but we had to make tools and other things a normal \"compiled\" project wouldn't have.\n\nAdditionally I had noticed the following issues captured by a prompt you should not run now but the issues should be included in a retro. […a 002 review-spec prompt for a visible keyboard legend and moving the New game button below the grid…]",
+      psrc: {own:true, why:"nothing suggested a retro \u2014 there is no retro stage, and the review's other example prompt was for a 002 cycle"},
       think: [
         "Counting shipped lines against test and tooling lines",
         "Arguing the no-package.json constraint both ways",
@@ -978,6 +1074,7 @@ var STAGES = [
     },
     {
       prompt: "Is there a way to determine how much time claude spent yesterday and today on gridsweep and how many tokens were spent plus their cost if it was paid on the API and not through subscription?",
+      psrc: {own:true, why:"a question about the run itself, not about the code"},
       think: [
         "Reading the local session transcripts for per-request token usage",
         "Merging twelve sessions onto one timeline, cutting on idle gaps",
@@ -991,6 +1088,7 @@ var STAGES = [
     },
     {
       prompt: "Add the 43% figure to the retro's \"by the numbers\" section.  Also add a section in the bottom about the time, tokens, and cost.  Note that I was doing this in the background so the time gaps were more about doing other things than working on this project. […]",
+      psrc: {own:true, why:"acting on the previous answer, in the same session"},
       think: [
         "Folding the cost figures into the retro's by-the-numbers table",
         "Qualifying the time figures - gaps are the developer elsewhere, not thinking",
@@ -1013,19 +1111,37 @@ var STAGES = [
       ["Tests and tooling", "1,614 lines", "warnv"],
       ["Spec artifacts", "1,720 lines", ""],
       ["Tests, final", "54 · all green", "hi"],
-      ["Claude working time", "~2h 03m", ""],
+      ["Claude working time", "2h 03m – 3h 34m", ""],
+      ["Wall-clock span", "12h 00m", "warnv"],
+      ["Sessions", "12", ""],
+      ["Requests", "568", ""],
       ["Tokens", "49.7M", ""],
       ["Cost at API rates", "$66.78", ""],
       ["Saved by prompt caching", "$201", "hi"]
     ]},
+    {t:"quote", h:"THE TIME FIGURE, AND WHAT IT IS NOT",
+     body:["The run spans <b>twelve hours of wall clock</b>, Sep 1 19:40 to Sep 2 07:40. Almost none of that is work. Merging the twelve sessions onto one timeline and discarding idle gaps gives <b>2h 03m</b> at a five-minute cutoff and <b>3h 34m</b> at fifteen &mdash; the same run measured three ways, <b>not three figures that add up</b>.",
+           "<b>Read that as Claude's working time, and nothing else.</b> The developer ran the project in the background between other work, so the gaps are not thinking time &mdash; they are the developer doing something else entirely.",
+           "<b>Nothing here measures the human review that every gate in this workflow depends on</b> &mdash; which is the one cost the process is actually built around."],
+     src:"specs/001-gridsweep-retro.md, Time"},
     {t:"quote", h:"THE OPEN ITEM THE RETRO WOULD NOT LET GO",
      body:["<b>A guard test added in pass 02 has the exact brittleness the final review criticised.</b> It counts regex matches, so writing <code>test('...', { skip, concurrency: 1 }, ...)</code> — a no-op for behaviour — turns it red.",
            "This is debt item 2's shape, <b>reintroduced by the pass that closed debt item 1</b>. It was verified to go red for the right reason and not checked for going red for wrong ones."],
      src:"specs/001-gridsweep-retro.md, Open items"},
     {t:"note", kind:"miss", body:"<b>Then a human opened the page and tried to play it.</b> Two defects, neither of them a defect against the spec: no visible legend of the keyboard controls, and the New game button sitting above the grid where nobody looks at the end of a game."}
   ],
+  next: {
+    where: "written into specs/001-gridsweep-retro.md \u00b7 Recommended next steps",
+    options: [
+      {tag:"NOT RUN \u00b7 the open item this run leaves behind",
+       text:"Use the human-gated-spec-driven-ai-development skill to make a bounded improvement pass for 001-gridsweep-plan.md fixing the brittle guard test recorded under Open items in 001-gridsweep-retro.md"},
+      {tag:"NOT RUN \u00b7 this is where cycle 002 starts",
+       text:"Use the human-gated-spec-driven-ai-development skill to in lightweight mode to review-spec for a new 002 cycle covering two UI changes to Gridsweep: a visible legend of the keyboard controls, and moving the New game button below the grid. Treat 001-gridsweep-spec.md as the settled baseline -- these are additions to it, not corrections of it."}
+    ],
+    note: "Neither has been run. <b>Nothing suggested writing this retro, and the retro suggests what comes next anyway</b> &mdash; the habit outlived the stage commands that taught it."
+  },
   hold: 2600,
-  notes: "Three prompts landed in one commit here - the retro, the cost analysis, then folding the figures back in. Land the numbers, then the open item: the pass that closed one debt item quietly reintroduced the shape of another, and only the retro caught it. Then hand over to the closing card."
+  notes: "The one turn that is a conversation: three prompts, one session, no reset between them, all landing in a single commit - the retro, the cost analysis, then folding the figures back in. If anyone asks how long this took: about two to three and a half hours of Claude working, inside a twelve-hour span, and the retro is explicit that the three time figures are alternative measurements rather than parts of a total. The number the retro says it cannot give you is the one that matters most - the human review time every gate depends on. All three are the developer's own; nothing suggested them, because there is no retro stage. Land the numbers, then the open item: the pass that closed one debt item quietly reintroduced the shape of another, and only the retro caught it. Then hand over to the closing card."
 }
 ];
 </script>
@@ -1038,7 +1154,7 @@ var STAGES = [
     head: 520, promptStart: 300, type: 26, submit: 560,
     thinkStart: 200, think: 880, thinkEnd: 260,
     tool: 350, fileHead: 260, file: 190,
-    say: 950, panel: 780, frame: 760, gate: 1300, hold: 1100
+    say: 950, panel: 780, frame: 760, gate: 1300, hand: 1200, hold: 1100
   };
 
   var $ = function (id) { return document.getElementById(id); };
@@ -1234,6 +1350,24 @@ var STAGES = [
     sideHead.textContent = st.actor === "human" ? "WHAT THE HUMAN PUT IN" : "WHAT CAME OUT";
     notesBody.innerHTML = st.notes || "";
   }
+  function sessionLine(n, note) {
+    var s = el("div", "session");
+    s.appendChild(el("span", null, "SESSION <b>" + ("0" + n).slice(-2) + " OF 12</b> \u00b7 FRESH CONTEXT"
+      + (note ? " \u00b7 <i>" + note + "</i>" : "")));
+    chat.appendChild(s);
+    scroll();
+  }
+
+  // Only the hand-written prompts are captioned. The rest need no caption:
+  // the previous turn showed the prompt being written.
+  function promptSource(psrc) {
+    if (!psrc || !psrc.own) return;
+    var d = el("div", "psrc own");
+    d.appendChild(el("span", null, psrc.why));
+    chat.appendChild(d);
+    scroll();
+  }
+
   function startPrompt(label) {
     var m = el("div", "msg");
     m.appendChild(el("div", "who human", label || "DEVELOPER"));
@@ -1309,6 +1443,32 @@ var STAGES = [
     scroll();
   }
 
+  // Most agent turns close by writing the next prompt into the artifact's
+  // User gate. Showing it here, where it is produced, is the point: the next
+  // turn's prompt box is this text, pasted into an empty session.
+  function handover(nx) {
+    var box = el("div", "handover" + (nx.none ? " none" : ""));
+    if (nx.none) {
+      box.appendChild(el("div", "ho-h", "NO NEXT PROMPT SUGGESTED"));
+      box.appendChild(el("div", "ho-n", nx.none));
+      chat.appendChild(box);
+      scroll();
+      return;
+    }
+    box.appendChild(el("div", "ho-h", "SUGGESTED NEXT STEP <span>&middot; " + nx.where + "</span>"));
+    nx.options.forEach(function (o) {
+      var pre = el("pre", "ho-p" + (o.taken ? " taken" : ""));
+      pre.appendChild(el("span", "ho-tag", o.tag || (o.taken
+        ? "\u25b8 THE ONE THE DEVELOPER RAN, IN THE NEXT SESSION"
+        : "OFFERED, NOT TAKEN")));
+      pre.appendChild(document.createTextNode(o.text));
+      box.appendChild(pre);
+    });
+    if (nx.note) box.appendChild(el("div", "ho-n", nx.note));
+    chat.appendChild(box);
+    scroll();
+  }
+
   /* --- the turn-complete bar ---------------------------------------------- */
   function turnEnd(i) {
     var st = STAGES[i];
@@ -1369,12 +1529,18 @@ var STAGES = [
     // A turn is normally one prompt. Turn 13 is three, all landing in one
     // commit, so a turn is modelled as a list of prompt/agent cycles.
     var cycles = st.cycles || (st.prompt || st.think || st.tools
-      ? [{ prompt: st.prompt, think: st.think, tools: st.tools, say: null }]
+      ? [{ prompt: st.prompt, think: st.think, tools: st.tools, psrc: st.psrc, say: null }]
       : []);
 
     if (!cycles.length && st.hand) {
       add(T.promptStart, function () { handBeat(st.hand); });
       add(1500, null);
+    }
+
+    // Every turn with an agent in it ran in its own session, started clean.
+    // The retro counts twelve sessions; there are twelve turns with an agent.
+    if (st.session) {
+      add(520, function () { sessionLine(st.session, st.sessionNote); });
     }
 
     cycles.forEach(function (cy, ci) {
@@ -1385,6 +1551,7 @@ var STAGES = [
           add(cycles.length > 1 ? T.type * 0.7 : T.type, function () { typeChunk(c); });
         });
         add(T.submit, endPrompt);
+        if (cy.psrc) add(420, function () { promptSource(cy.psrc); });
       }
       if (cy.think) {
         add(T.thinkStart, startThink);
@@ -1410,9 +1577,18 @@ var STAGES = [
     });
     if (st.say) add(T.say, function () { sayLine(st.say); });
     if (st.gate) add(T.gate, function () { gateLine(st.gate); });
-    add(T.hold, null);
+    if (st.next) add(T.hand, function () { handover(st.next); });
+    add(st.hold || T.hold, null);
     return B;
   }
+
+  // Number the sessions off the stage list so the two can never disagree.
+  (function numberSessions() {
+    var n = 0;
+    STAGES.forEach(function (st) {
+      if (st.prompt || st.cycles) { n += 1; st.session = n; }
+    });
+  })();
 
   var BEATS = STAGES.map(buildBeats);
   var DUR = BEATS.map(function (b) { return b.reduce(function (a, x) { return a + x.ms; }, 0); });

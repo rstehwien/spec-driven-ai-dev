@@ -301,8 +301,17 @@ that are shorter than a cutoff:
 | ≤ 5 min | 1h 16m | 47m | **2h 03m** |
 | ≤ 10 min | 1h 23m | 1h 07m | 2h 30m |
 | ≤ 15 min | 2h 02m | 1h 32m | 3h 34m |
+| Wall-clock span, first event to last | 4h 20m | 7h 40m | 12h 00m |
 
-**Read this as Claude's working time, and nothing else.** The developer ran the
+**Those first three rows are alternatives, not components.** Each is the whole
+run measured once, discarding idle gaps longer than the cutoff; a larger cutoff
+absorbs more of the same gaps, so the number grows. They do not add up. The
+honest statement is **Claude worked for somewhere between 2h and 3h 34m**,
+depending on how long a pause you are willing to call "working". The last row is
+the outer bound — everything between the first event and the last, gaps
+included.
+
+**Read the first three rows as Claude's working time, and nothing else.** The developer ran the
 project in the background between other work, so the twelve-hour wall-clock span
 is not elapsed effort and the gaps are not thinking time — they are the
 developer doing something else entirely. Nothing here measures the human review
