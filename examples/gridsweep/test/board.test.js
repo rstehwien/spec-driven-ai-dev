@@ -118,6 +118,18 @@ test('board.js is DOM-free and free of ES module syntax', () => {
   assert.ok(!/^\s*export\s/m.test(source), 'board.js must not use export');
 });
 
+test('board.js exports only createGame and the three status constants', () => {
+  // The snapshot already carries rows, columns and mineCount, so nothing else
+  // needs to be on the module. LAYOUT in particular would publish the mine
+  // positions to any caller.
+  assert.deepEqual(Object.keys(Gridsweep).sort(), [
+    'IN_PROGRESS',
+    'LOST',
+    'WON',
+    'createGame',
+  ]);
+});
+
 // ---------------------------------------------------------------------------
 // Phase 02: reveal, marking, cascade, and end states.
 // ---------------------------------------------------------------------------
@@ -133,25 +145,26 @@ const CASCADE_FROM_6_7 = [
   [5, 6], [5, 7], [6, 6], [6, 7], [7, 6], [7, 7],
 ];
 
-const revealedCoordinates = (snapshot) => {
+// One scan over the snapshot, in row-major order. The three named readers below
+// differ only in their predicate, so they cannot drift apart.
+const coordinatesWhere = (snapshot, predicate) => {
   const out = [];
-  for (let row = 0; row < 8; row += 1) {
-    for (let column = 0; column < 8; column += 1) {
-      if (snapshot.cells[row][column].revealed) out.push([row, column]);
+  for (let row = 0; row < snapshot.rows; row += 1) {
+    for (let column = 0; column < snapshot.columns; column += 1) {
+      if (predicate(snapshot.cells[row][column])) out.push([row, column]);
     }
   }
   return out;
 };
 
-const markedCoordinates = (snapshot) => {
-  const out = [];
-  for (let row = 0; row < 8; row += 1) {
-    for (let column = 0; column < 8; column += 1) {
-      if (snapshot.cells[row][column].marked) out.push([row, column]);
-    }
-  }
-  return out;
-};
+const revealedCoordinates = (snapshot) =>
+  coordinatesWhere(snapshot, (cell) => cell.revealed);
+
+const markedCoordinates = (snapshot) =>
+  coordinatesWhere(snapshot, (cell) => cell.marked);
+
+const mineCoordinates = (snapshot) =>
+  coordinatesWhere(snapshot, (cell) => cell.mine);
 
 // Reveals every safe cell that a direct reveal will accept. Marked cells are
 // skipped, since a direct reveal of a marked cell is specified as a no-op.
@@ -470,100 +483,127 @@ test('index.html links the stylesheet and provides the elements ui.js renders in
 // exactly one entry point.
 // ---------------------------------------------------------------------------
 
-// Pulls the quoted key names out of one named binding table in ui.js, so the
-// test reads the actual bindings rather than trusting a comment about them.
-const bindingTable = (source, name) => {
-  const match = new RegExp(`var ${name} = ([\\[{][\\s\\S]*?[\\]}]);`).exec(
+// A source scan can only say what ui.js does *not* contain, so every check
+// below is written as a forbidden thing -- a key compared to a literal, a
+// second keyboard listener, a reset the keyboard can reach -- rather than as a
+// shape the file happens to have today. Checks written the other way round
+// (an identifier spelled a particular way, a declaration in a particular
+// position, `var` rather than `const`) went red on refactors that broke
+// nothing, so they are gone. What none of this can do is notice a renderer
+// that is simply broken; that gap belongs to the browser sweep and is on the
+// debt register in the final review.
+
+// Strips comments so the scans read code only: a comment may legitimately
+// mention the very syntax they forbid.
+const withoutJsComments = (source) =>
+  source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+
+// The body of the first listener registered for one event type, found by brace
+// matching from its callback. Position-independent, so moving the listener
+// within the file does not change what this reads.
+const listenerBody = (source, eventName) => {
+  const start = new RegExp(`addEventListener\\(\\s*['"]${eventName}['"]`).exec(
     source,
   );
-  assert.ok(match, `ui.js must declare a ${name} binding table`);
-  return (match[1].match(/'([^']*)'|(\bArrow\w+\b)|(\bEnter\b)/g) || []).map(
-    (token) => token.replace(/'/g, ''),
-  );
+  assert.ok(start, `ui.js must register a ${eventName} listener`);
+
+  const open = source.indexOf('{', start.index + start[0].length);
+  assert.ok(open !== -1, `the ${eventName} listener must have a body`);
+
+  let depth = 0;
+  for (let i = open; i < source.length; i += 1) {
+    if (source[i] === '{') depth += 1;
+    else if (source[i] === '}' && (depth -= 1) === 0) {
+      return source.slice(open + 1, i);
+    }
+  }
+  return assert.fail(`the ${eventName} listener body is unbalanced`);
 };
 
-test('ui.js moves the cursor with the four arrow keys and nothing else', () => {
-  const source = readProjectFile('ui.js');
+test('ui.js binds keys in one place and compares no key to a literal', () => {
+  const source = withoutJsComments(readProjectFile('ui.js'));
 
-  assert.deepEqual(bindingTable(source, 'CURSOR_STEPS').sort(), [
-    'ArrowDown',
-    'ArrowLeft',
-    'ArrowRight',
-    'ArrowUp',
-  ]);
-});
-
-test('ui.js reveals on Enter and Space and marks on F, and binds no other key', () => {
-  const source = readProjectFile('ui.js');
-
-  assert.deepEqual(bindingTable(source, 'REVEAL_KEYS').sort(), [' ', 'Enter']);
-  assert.deepEqual(bindingTable(source, 'MARK_KEYS').sort(), ['F', 'f']);
-
-  // The tables above are the whole binding surface only if no handler compares
-  // event.key to a literal of its own. This is the guard that keeps a restart
-  // key -- which the spec forbids outright -- from ever being added quietly.
+  // Every key ui.js acts on has to come out of a lookup table, so one place
+  // answers "what does the keyboard do" -- which is what makes the restart-key
+  // check below exhaustive rather than a spot check.
   assert.ok(
-    !/\bkey\s*===\s*['"]/.test(source),
-    'ui.js must bind keys through the tables, not by comparing event.key',
+    !/\bkey\s*[=!]==?\s*['"]/.test(source),
+    'ui.js must bind keys through lookup tables, not by comparing event.key',
+  );
+  assert.ok(
+    !/\b(?:keyCode|charCode|which)\b/.test(source),
+    'ui.js must read event.key, not a deprecated key code',
+  );
+  assert.equal(
+    (source.match(/addEventListener\(\s*['"]key\w+['"]/g) || []).length,
+    1,
+    'ui.js must have exactly one keyboard listener',
   );
 });
 
-test('ui.js suppresses the context menu over the board only', () => {
-  const source = readProjectFile('ui.js');
+test('ui.js names no keyboard key beyond the four arrows and Enter', () => {
+  const source = withoutJsComments(readProjectFile('ui.js'));
 
-  assert.ok(
-    /boardElement\.addEventListener\(\s*'contextmenu'/.test(source),
-    'ui.js must suppress the context menu on the board element',
-  );
-  assert.ok(
-    !/(?:document|window)\.addEventListener\(\s*'contextmenu'/.test(source),
-    'context-menu suppression must not reach the whole page',
-  );
-});
+  // Space and the mark key are single characters and cannot be found by name,
+  // but every other key a stray binding would plausibly use can be.
+  const named =
+    source.match(
+      /\b(?:Arrow(?:Up|Down|Left|Right)|Enter|Escape|Tab|Home|End|Page(?:Up|Down)|Backspace|Delete|F\d{1,2})\b/g,
+    ) || [];
 
-test('ui.js reads the board only through the public surface', () => {
-  const source = readProjectFile('ui.js');
-
-  // ui.js may not reimplement a rule. Everything it changes must go through
-  // reveal / toggleMark / reset, and everything it draws comes from snapshot.
-  const calls = (source.match(/\bgame\.(\w+)\(/g) || []).map((call) =>
-    call.slice('game.'.length, -1),
-  );
   assert.deepEqual(
-    [...new Set(calls)].sort(),
-    ['reset', 'reveal', 'snapshot', 'toggleMark'],
+    [...new Set(named)].sort(),
+    ['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'Enter'],
+    'ui.js must name only the keys the spec binds',
   );
 });
 
-test('the New game button is the only way to reset the game', () => {
-  const source = readProjectFile('ui.js');
+test('no key can reset the game; the New game button is the only way', () => {
+  const source = withoutJsComments(readProjectFile('ui.js'));
 
   assert.equal(
-    (source.match(/\bgame\.reset\(/g) || []).length,
+    (source.match(/\.reset\(/g) || []).length,
     1,
     'reset must have exactly one call site',
   );
   assert.ok(
-    /newGameElement\.addEventListener\(\s*'click'/.test(source),
-    'the New game button must be wired to a click handler',
-  );
-  // The single reset call site has to be the button's, not a key handler's:
-  // it must fall after the New game listener and before any listener wired
-  // after it, which pins it inside that handler's body.
-  const wiring = "newGameElement.addEventListener('click'";
-  const buttonAt = source.indexOf(wiring);
-  const resetAt = source.indexOf('game.reset(');
-  assert.ok(
-    resetAt > buttonAt,
-    'the reset call must live inside the New game click handler',
-  );
-  const nextListenerAt = source.indexOf(
-    'addEventListener(',
-    buttonAt + wiring.length,
+    !/\breset\b/.test(listenerBody(source, 'keydown')),
+    'the keyboard must not be able to discard a game in progress',
   );
   assert.ok(
-    nextListenerAt === -1 || resetAt < nextListenerAt,
-    'the reset call must not sit in a listener wired after the button',
+    /getElementById\(\s*['"]new-game['"]\s*\)/.test(source),
+    'ui.js must wire the New game button',
+  );
+});
+
+test('ui.js suppresses the context menu over the board only', () => {
+  const source = withoutJsComments(readProjectFile('ui.js'));
+
+  assert.ok(
+    /addEventListener\(\s*['"]contextmenu['"]/.test(source),
+    'ui.js must suppress the context menu so right-click can mark',
+  );
+  assert.ok(
+    !/(?:document|window)\.addEventListener\(\s*['"]contextmenu['"]/.test(
+      source,
+    ),
+    'context-menu suppression must not reach the whole page',
+  );
+});
+
+test('ui.js touches Gridsweep only through its public surface', () => {
+  const source = withoutJsComments(readProjectFile('ui.js'));
+
+  // The renderer's whole dependency on the rule engine, in one assertion. It
+  // also pins the narrowed export from the other side: anything added back to
+  // Gridsweep that ui.js then reaches for shows up here.
+  const members = [...source.matchAll(/\bGridsweep\.(\w+)/g)].map(
+    (match) => match[1],
+  );
+  assert.deepEqual(
+    [...new Set(members)].sort(),
+    ['IN_PROGRESS', 'LOST', 'WON', 'createGame'],
+    'ui.js must read nothing off Gridsweep beyond createGame and the statuses',
   );
 });
 
@@ -578,16 +618,6 @@ test('the New game button is the only way to reset the game', () => {
 // naming it, the mine that ended the game being drawn differently from the
 // mines merely uncovered alongside it, and a wrong mark being drawn at all.
 // ---------------------------------------------------------------------------
-
-const mineCoordinates = (snapshot) => {
-  const out = [];
-  for (let row = 0; row < 8; row += 1) {
-    for (let column = 0; column < 8; column += 1) {
-      if (snapshot.cells[row][column].mine) out.push([row, column]);
-    }
-  }
-  return out;
-};
 
 test('the snapshot at game end carries everything needed to open the board', () => {
   // A regression guard rather than a red test: it pins the part of the
@@ -622,33 +652,20 @@ test('the snapshot at game end carries everything needed to open the board', () 
   }
 });
 
-test('ui.js shows one end message per ending, and says each exactly once', () => {
-  const source = readProjectFile('ui.js');
+test('ui.js says each end message exactly once', () => {
+  const source = withoutJsComments(readProjectFile('ui.js'));
 
-  assert.ok(
-    /END_MESSAGES\[Gridsweep\.WON\]\s*=\s*'You win'/.test(source),
-    'a win must show the winning message',
-  );
-  assert.ok(
-    /END_MESSAGES\[Gridsweep\.LOST\]\s*=\s*'You lose'/.test(source),
-    'a loss must show the losing message',
-  );
-
+  // Once each means the message lives in the table and nowhere else, so no
+  // second code path can put a different wording on the status line. Which
+  // status each is keyed to is held by the next test, which forbids ui.js from
+  // naming a status at all.
   for (const message of ['You win', 'You lose']) {
     assert.equal(
       (source.match(new RegExp(message, 'g')) || []).length,
       1,
-      `"${message}" must appear once, in the message table and nowhere else`,
+      `"${message}" must appear exactly once in ui.js`,
     );
   }
-
-  // One assignment site means the status line cannot be left saying something
-  // stale by a code path that forgot to clear it.
-  assert.equal(
-    (source.match(/statusElement\.textContent\s*=/g) || []).length,
-    1,
-    'the status line must have exactly one assignment site',
-  );
 });
 
 test('ui.js asks board.js for the game status instead of naming it', () => {
@@ -668,7 +685,7 @@ test('ui.js singles out the triggering mine and shows a mark left on a safe cell
   const source = readProjectFile('ui.js');
 
   assert.ok(
-    /snapshot\.losingCell/.test(source),
+    /\blosingCell\b/.test(source),
     'ui.js must read losingCell to find the mine that ended the game',
   );
   assert.ok(
@@ -685,36 +702,36 @@ test('ui.js singles out the triggering mine and shows a mark left on a safe cell
   );
 });
 
-// Pulls one declaration out of one rule, so the test reads the stylesheet
-// rather than trusting a class name to mean something.
-const declaration = (css, selector, property) => {
+// The background one rule paints, whichever of the two spellings sets it. The
+// test cares that two rules paint differently, not how the declaration is
+// written, so `background` and `background-color` are interchangeable here.
+const background = (css, selector) => {
   const rule = new RegExp(
     `${selector.replace(/\./g, '\\.')}\\s*\\{([^}]*)\\}`,
   ).exec(css);
   assert.ok(rule, `styles.css must declare a ${selector} rule`);
-  const match = new RegExp(`\\b${property}\\s*:\\s*([^;]+);`).exec(rule[1]);
-  assert.ok(match, `${selector} must set ${property}`);
-  return match[1].trim();
+
+  for (const property of ['background-color', 'background']) {
+    const match = new RegExp(`\\b${property}\\s*:\\s*([^;]+);`).exec(rule[1]);
+    if (match) return match[1].trim();
+  }
+  return assert.fail(`${selector} must set a background`);
 };
 
 test('styles.css draws the triggering mine and a wrong mark distinctly', () => {
   const css = readProjectFile('styles.css');
 
+  // Each end-state rule names the class it overrides alongside its own, so it
+  // outranks that rule on specificity. Nothing here depends on source order --
+  // which is why there is no longer an assertion about it.
   assert.notEqual(
-    declaration(css, '.cell.exploded', 'background'),
-    declaration(css, '.cell.mine', 'background'),
+    background(css, '.cell.mine.exploded'),
+    background(css, '.cell.mine'),
     'the mine that ended the game must not look like the ones opened with it',
   );
   assert.notEqual(
-    declaration(css, '.cell.wrong-mark', 'background'),
-    declaration(css, '.cell.hidden', 'background'),
+    background(css, '.cell.marked.wrong-mark'),
+    background(css, '.cell.hidden'),
     'a mark the board proved wrong must not look like an untouched cell',
-  );
-
-  // .cell.exploded and .cell.mine have the same specificity, so the cascade is
-  // decided by source order alone. Both classes are on the same element.
-  assert.ok(
-    css.indexOf('.cell.exploded') > css.indexOf('.cell.mine'),
-    '.cell.exploded must come after .cell.mine to win the cascade',
   );
 });

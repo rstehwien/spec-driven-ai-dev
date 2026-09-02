@@ -65,6 +65,8 @@ One open reading remains, and it is yours to close, not mine:
   behaviour. But the criterion as written does not say that, so either the
   behaviour changes or the spec sentence gains the exception.
 
+  > Decision: Keep current behavior
+
 ## Architecture assessment
 
 - **Separation of concerns**: clean. `board.js` has no DOM reference and
@@ -110,6 +112,8 @@ occurrence of `GridsweepUI` in the repo is this assignment.
 So it is a scaffold that outlived its use, and it hands any script on the page
 a mutable handle to game state that the renderer would then paint. Delete it.
 
+> Decision: Delete the unneeded scaffolding.
+
 ### 2. A third of the suite tests source text, not behaviour
 
 15 of the 42 tests assert regexes over `ui.js`, `styles.css`, and `index.html`.
@@ -153,6 +157,9 @@ Recommendation — narrow rather than delete:
 
 This belongs on the debt register either way — see below.
 
+> Decision: Narrow the scripts focusing on not allowing tests to stay green while renderer is completely broken.  Implement the suggestions above.
+
+
 ## Cleanup opportunities
 
 - **Narrow the public surface.** `Gridsweep.ROWS`, `.COLUMNS`, and `.LAYOUT`
@@ -187,6 +194,8 @@ This belongs on the debt register either way — see below.
   authority; the element array standing in for them is the kind of substitution
   that goes wrong quietly.
 
+> Decision: Do suggested cleanup.
+
 ## Technical debt register
 
 1. **No automated coverage of renderer behaviour.** Structural, accepted, and
@@ -195,13 +204,20 @@ This belongs on the debt register either way — see below.
    future change to `ui.js` is guarded only by grep tests and by hand.
    *If this project ever grows, promoting that driver into the repo is the
    highest-value single change available.*
+   > Decision: promote the driver into the repo.
+
 2. **15 source-grep tests, several coupled to formatting.** As above. Cost is
    paid on every refactor of `ui.js` or `styles.css`.
+   > Decision: cleanup
+
 3. **Criterion 6 has two readings and the code takes one of them.** Not a
    defect; an unclosed decision. Close it in the spec.
+   > Decision: Close in spec with code as source of truth.
+
 4. Manual verification evidence (screenshots, the CDP driver) is recorded in
    the plan but the artifacts themselves are gone. Fine for a demo; worth
    knowing if the loss/win presentation is ever disputed.
+   > Decision: We can regenerate screenshots and CDP driver if needed.  This is ok for demo.
 
 ## Go / no-go recommendation
 
@@ -238,3 +254,44 @@ specs/002-spec.md
 ## Approval state
 
 - draft pending user review
+> Decision: approved draft
+
+## Improvement pass 01 — applied 2026-09-02
+
+Bounded pass covering the decisions recorded above under **Important
+improvements** and **Cleanup opportunities**. Full detail and evidence are in
+[001-gridsweep-plan.md](001-gridsweep-plan.md) under "Improvement pass 01".
+
+| Item | Decision | State |
+| --- | --- | --- |
+| Imp. 1 — dead `GridsweepUI` global | delete the scaffolding | done |
+| Imp. 2 — source-grep tests | narrow, per the keep / re-aim list | done |
+| Cleanup — narrow the `Gridsweep` export | do it | done |
+| Cleanup — `countMines()` recomputes a constant | do it | done |
+| Cleanup — two copies of the 8-neighbour walk | do it | done |
+| Cleanup — CSS correctness rests on file order | do it | done |
+| Cleanup — three duplicate test helpers | do it | done |
+| Cleanup — `moveCursor` clamps against the DOM | do it | done |
+| Debt 1 — promote the browser driver into the repo | promote it | **not done — out of the pass's scope** |
+| Debt 2 — brittle source-grep tests | cleanup | done, as Imp. 2 |
+| Debt 3 — criterion 6 has two readings | close in spec, code as source of truth | **not done — out of the pass's scope** |
+| Debt 4 — manual verification artifacts are gone | acceptable for a demo | no action |
+
+`node --test` after the pass: `tests 43 / pass 43 / fail 0`. The renderer was
+re-verified in headless Chrome, and the review's own sweeps (cascade never
+reveals a mine, 54 safe cells reach `won`, 12 cells cost 12 queue pops) were
+re-run against the refactored engine with identical results.
+
+Both brittleness claims the review reproduced now pass under the mutation that
+used to break them, and eight mutations that *should* be caught were confirmed
+to still go red. The list is in the plan.
+
+What this pass did **not** fix, because it is what the review said it was: the
+suite still cannot notice a broken renderer. Debt item 1 is the fix, its
+decision is recorded, and it is the natural next pass.
+
+## Approval state
+
+- draft pending user review
+- approved by developer, with decisions recorded inline
+- improvement pass 01 applied 2026-09-02; debt items 1 and 3 still open

@@ -28,17 +28,29 @@
     return LAYOUT[row][column] === '*';
   }
 
-  function countAdjacentMines(row, column) {
-    var count = 0;
+  function inBounds(row, column) {
+    return row >= 0 && row < ROWS && column >= 0 && column < COLUMNS;
+  }
+
+  // The one place the 8-neighbour walk is written. Both callers -- the
+  // adjacency count and the cascade -- get the same bounds rule for free, so
+  // an edge or corner cell can never be handled two different ways.
+  function forEachNeighbor(row, column, visit) {
     for (var dr = -1; dr <= 1; dr += 1) {
       for (var dc = -1; dc <= 1; dc += 1) {
         if (dr === 0 && dc === 0) continue;
         var r = row + dr;
         var c = column + dc;
-        if (r < 0 || r >= ROWS || c < 0 || c >= COLUMNS) continue;
-        if (isMine(r, c)) count += 1;
+        if (inBounds(r, c)) visit(r, c);
       }
     }
+  }
+
+  function countAdjacentMines(row, column) {
+    var count = 0;
+    forEachNeighbor(row, column, function (r, c) {
+      if (isMine(r, c)) count += 1;
+    });
     return count;
   }
 
@@ -69,13 +81,14 @@
     return total;
   }
 
+  // The layout is fixed for the life of the module, so the mine total is a
+  // constant. Counting it once here says that; counting it inside snapshot()
+  // said the opposite.
+  var MINE_COUNT = countMines();
+
   var IN_PROGRESS = 'in-progress';
   var WON = 'won';
   var LOST = 'lost';
-
-  function inBounds(row, column) {
-    return row >= 0 && row < ROWS && column >= 0 && column < COLUMNS;
-  }
 
   function createGame() {
     var cells = buildCells();
@@ -93,16 +106,9 @@
         cell.marked = false;
         cell.revealed = true;
         if (cell.adjacent !== 0) continue;
-        for (var dr = -1; dr <= 1; dr += 1) {
-          for (var dc = -1; dc <= 1; dc += 1) {
-            if (dr === 0 && dc === 0) continue;
-            var r = next[0] + dr;
-            var c = next[1] + dc;
-            if (!inBounds(r, c)) continue;
-            if (cells[r][c].revealed) continue;
-            queue.push([r, c]);
-          }
-        }
+        forEachNeighbor(next[0], next[1], function (r, c) {
+          if (!cells[r][c].revealed) queue.push([r, c]);
+        });
       }
     }
 
@@ -168,7 +174,7 @@
       return {
         rows: ROWS,
         columns: COLUMNS,
-        mineCount: countMines(),
+        mineCount: MINE_COUNT,
         status: status,
         losingCell: losingCell
           ? { row: losingCell.row, column: losingCell.column }
@@ -194,10 +200,10 @@
     };
   }
 
+  // The public surface is deliberately this small. The snapshot already carries
+  // `rows`, `columns` and `mineCount`, so the dimensions do not need exporting,
+  // and LAYOUT would put the mine positions on the public API for no caller.
   var Gridsweep = {
-    ROWS: ROWS,
-    COLUMNS: COLUMNS,
-    LAYOUT: LAYOUT,
     IN_PROGRESS: IN_PROGRESS,
     WON: WON,
     LOST: LOST,

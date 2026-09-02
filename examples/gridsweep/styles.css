@@ -137,20 +137,21 @@ h1 {
 }
 
 /* End of game.
-   .cell.exploded and .cell.wrong-mark carry the same specificity as the rules
-   they override (.cell.mine, .cell.hidden / .cell.marked), so they must stay
-   below them in the file: source order is what decides the cascade here. */
+   Both rules below name the class they override as well as their own, so they
+   outrank .cell.mine and .cell.hidden / .cell.marked on specificity alone. The
+   precedence is in the selector rather than in where the rule happens to sit,
+   so moving either rule in the file changes nothing. */
 
 /* The mine the player actually hit, as against the mines merely opened
    alongside it: a hot face rather than the pale one. */
-.cell.exploded {
+.cell.mine.exploded {
   background: #d02020;
   color: #ffffff;
 }
 
 /* A mark still sitting on a safe cell when the board opened. The glyph changes
    from a flag to a cross, so this does not rely on colour alone. */
-.cell.wrong-mark {
+.cell.marked.wrong-mark {
   background: #e6cfcf;
   color: #a00000;
 }

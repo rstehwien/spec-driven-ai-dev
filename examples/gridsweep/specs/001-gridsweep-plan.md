@@ -693,3 +693,142 @@ the spec end to end.
   ("further input has no effect" after the game ends) is meant to cover cursor
   movement, which currently stays live. The review recommends keeping the
   behaviour and amending the spec sentence.
+
+## Improvement pass 01 - post-final-review cleanup
+
+Bounded pass run 2026-09-02 against the approved spec and this plan. Scope was
+the **Important improvements** and **Cleanup opportunities** sections of
+[001-gridsweep-final-review.md](001-gridsweep-final-review.md), and the
+developer decisions recorded inline there. No spec change, no new phase, no
+behaviour change intended.
+
+### Tasks
+- [x] delete the dead `GridsweepUI` global from `ui.js`
+- [x] narrow the `Gridsweep` export to `createGame` and the three statuses
+- [x] compute the mine total once at module scope instead of per `snapshot()`
+- [x] hoist `inBounds` and give both neighbour walks one `forEachNeighbor`
+- [x] make the end-state CSS selectors carry their own precedence
+- [x] clamp cursor movement against the snapshot, not the element array
+- [x] fold the three test coordinate scans into one `coordinatesWhere`
+- [x] re-aim the source-scan tests onto forbidden things rather than shapes
+- [x] verify no behaviour changed, in the suite and in a real browser
+
+### What changed
+
+`board.js`
+- Public surface is now `createGame`, `IN_PROGRESS`, `WON`, `LOST`. `ROWS`,
+  `COLUMNS` and `LAYOUT` are gone from it; the snapshot already carried the
+  dimensions, and `LAYOUT` published the mine positions to any caller.
+- `countMines()` is called once into `MINE_COUNT` at module scope. `snapshot()`
+  reads the constant, so a `reveal` that snapshots several times no longer
+  rescans 64 layout characters each time.
+- `inBounds` is hoisted above its callers and the `dr`/`dc` double loop exists
+  once, as `forEachNeighbor(row, column, visit)`. `countAdjacentMines` and the
+  cascade both use it, so the bounds rule is written in one place instead of
+  two (one of which had inlined its own copy).
+
+`ui.js`
+- `globalThis.GridsweepUI` deleted. It had no reader anywhere in the repo, the
+  Phase 05 sweep never used it, and it handed any script on the page a mutable
+  handle to live game state.
+- `moveCursor` clamps against `boardSize`, captured from the snapshot in
+  `buildGrid`, rather than against `cellElements.length`. The DOM is a
+  projection of the board and was standing in for the authority on its size.
+
+`styles.css`
+- `.cell.exploded` → `.cell.mine.exploded` and `.cell.wrong-mark` →
+  `.cell.marked.wrong-mark`. Each end-state rule now names the class it
+  overrides, so it wins on specificity and the cascade no longer depends on
+  where the rule sits in the file. The comment that documented the source-order
+  dependency is replaced accordingly.
+
+`test/board.test.js`
+- `revealedCoordinates`, `markedCoordinates` and `mineCoordinates` are three
+  one-line predicates over a single `coordinatesWhere` scan, which also reads
+  `snapshot.rows` / `.columns` instead of a hard-coded 8.
+- New test pinning the narrowed export: `Object.keys(Gridsweep)` is exactly the
+  four names.
+- The source scans over `ui.js` and `styles.css` are rewritten as forbidden
+  things rather than shapes the files happen to have. Gone: the `var NAME = `
+  binding-table extractor, the requirement that the board variable be named
+  `game`, the `indexOf` ordering that pinned where the New game wiring sits,
+  the `background` shorthand by name, and the `.cell.exploded` after
+  `.cell.mine` ordering assertion.
+- What replaced them, and what each actually holds:
+  - keys are bound through tables only — no `key === '...'`, no `keyCode` /
+    `charCode` / `which`, exactly one keyboard listener
+  - `ui.js` names no keyboard key beyond the four arrows and `Enter`
+  - reset has one call site and the `keydown` handler's body contains no
+    `reset`, found by brace matching rather than by file position
+  - `ui.js` reads nothing off `Gridsweep` beyond `createGame` and the three
+    statuses, which pins the narrowed export from the renderer's side too
+  - the context menu is suppressed somewhere, and not on `document` / `window`
+  - each end message appears exactly once in `ui.js`
+  - the two end-state backgrounds differ from the rules they override,
+    accepting either `background` or `background-color`
+- A `withoutJsComments` helper strips comments before every `ui.js` scan, so a
+  comment can mention the syntax the scans forbid.
+- Kept untouched, because they guard delivery constraints that fail silently in
+  the browser and match syntax the code must *never* contain: no `type="module"`,
+  no `import` / `export` in either script, no `http(s)` or protocol-relative
+  URL, `board.js` before `ui.js`, the four element ids, no `document` / `window`
+  in `board.js`, and the suite never loading `ui.js`.
+
+### Evidence
+
+- `node --test` → `tests 43 / pass 43 / fail 0`, exit `0`. One test added (the
+  export-surface guard); the fifteen source scans are still fifteen.
+- The refactor is behaviour-preserving in `board.js`, measured against
+  `git show HEAD:board.js` with a pop counter spliced into both copies:
+  `(0,0) pops=12 revealed=12`, `(6,7) pops=8 revealed=6`, `(0,3) pops=12
+  revealed=12`, `(5,7) pops=0 revealed=1` — identical before and after.
+- Independent re-checks of the review's own sweeps against the refactored
+  engine: all 7 zero-count starting cells cascade without ever revealing a
+  mine; revealing all 54 safe cells still reaches `won`; the snapshot is still
+  a deep copy.
+- The four brittleness cases the review named were replayed on scratch copies
+  and now all pass 43/43: `var` → `const` on the three binding tables,
+  `background` → `background-color` on the exploded rule, renaming the local
+  `game` variable to `board`, and moving the New game wiring above the
+  `keydown` listener.
+- The converse was checked too — eight mutations that *should* be caught, each
+  on its own scratch copy, and each went red: a restart key added to the
+  `keydown` handler, a second `reset` call site, the exploded background made
+  identical to an ordinary mine's, the context menu moved to `document`,
+  `type="module"` on `ui.js`, `ROWS` put back on the export and read by
+  `ui.js`, the `.cell.mine.exploded` rule deleted, and a `keyup` listener added
+  alongside `keydown`.
+- Renderer re-verified in headless Chrome over CDP, driving the page through
+  the DOM and the keyboard only. Cursor clamps at `0,0` and `7,7`; a mark drops
+  the counter to 9; walking into `(7,0)` gives `You lose`, `board ended`, ten
+  mines drawn, the hit mine `rgb(208, 32, 32)` against `rgb(232, 180, 180)` for
+  the others, and the wrong mark `rgb(230, 207, 207)` against `rgb(214, 214,
+  214)` for an untouched cell; reveal and mark are inert afterwards while the
+  cursor still moves; New game returns a clean board; revealing all 54 safe
+  cells gives `You win` with all ten mines shown and none exploded.
+- The CSS claim was tested rather than asserted: with the two end-state rules
+  moved to the *top* of the stylesheet, the browser still paints the same
+  backgrounds and the suite is still green. Source order no longer decides it.
+
+### Out of scope
+- Technical debt register item 1 (promote the browser driver into the repo).
+- Technical debt register item 3 (close acceptance criterion 6 in the spec).
+- Any change to `specs/001-gridsweep-spec.md`.
+
+### Risks / blockers
+- None. Nothing here changes what the game does.
+
+### Notes
+- The `listenerBody` helper brace-matches and so would misread a brace inside a
+  string literal in a listener body. There is none today, and it fails loudly
+  rather than silently if that changes.
+- Two source scans got weaker rather than re-aimed, and it is worth knowing
+  which. The status line no longer has a "single assignment site" assertion,
+  and the end messages are no longer asserted to be keyed to `Gridsweep.WON` /
+  `.LOST` by name — both depended on identifier spelling. The messages are
+  still each pinned to exactly one occurrence, and the neighbouring test still
+  forbids `ui.js` from naming a status literal at all.
+- The gap the review named is unchanged by this pass: the suite still cannot
+  notice a renderer that is simply broken, because it never loads `ui.js`. The
+  browser driver used above is in the session scratchpad, not the repo. Debt
+  register item 1 is the fix and is the natural next pass.

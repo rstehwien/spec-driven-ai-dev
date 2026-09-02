@@ -46,9 +46,14 @@
   // and drop focus to the body, which is exactly the roving-tabindex trap.
   var cellElements = [];
 
+  // The board's dimensions, taken from the snapshot. The element array is a
+  // projection of the board and never the authority on its size.
+  var boardSize = { rows: 0, columns: 0 };
+
   function buildGrid(snapshot) {
     boardElement.textContent = '';
     cellElements = [];
+    boardSize = { rows: snapshot.rows, columns: snapshot.columns };
 
     for (var row = 0; row < snapshot.rows; row += 1) {
       var rowElement = document.createElement('div');
@@ -225,8 +230,8 @@
   // parks the cursor on the border instead of jumping to the far side.
   function moveCursor(step) {
     setCursor(
-      clamp(cursor.row + step.row, cellElements.length),
-      clamp(cursor.column + step.column, cellElements[0].length),
+      clamp(cursor.row + step.row, boardSize.rows),
+      clamp(cursor.column + step.column, boardSize.columns),
     );
   }
 
@@ -302,12 +307,4 @@
     refresh();
   });
 
-  // A small handle for driving the page from the console during manual
-  // verification, and the fast path the plan asks for when checking a win
-  // without clicking 54 cells by hand.
-  globalThis.GridsweepUI = {
-    game: game,
-    refresh: refresh,
-    setCursor: setCursor,
-  };
 })();

@@ -55,3 +55,8 @@ Implemented phase 5
 Use the human-gated-spec-driven-ai-development skill to final-review for 001-gridsweep-plan.md
 ```
 Created 001-gridsweep-final-review.md
+
+#11
+```
+Use the human-gated-spec-driven-ai-development skill to make a bounded improvement pass for 001-gridsweep-plan.md covering the Important improvements and Cleanup opportunities in 001-gridsweep-final-review.md
+```
