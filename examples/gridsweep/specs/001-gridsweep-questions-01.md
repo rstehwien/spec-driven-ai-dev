@@ -27,6 +27,8 @@
      centre of the state machine and is the thing tests assert against; changing
      it after the logic module and its test suite exist means reworking both.
 
+  > Decision: Use proposed fallback.
+
 2. Does correct flagging play any part in winning — for example, must all ten
    mines be flagged, or must there be no incorrect flags?
    - Proposed fallback: no. Flags are a player aid only and are never consulted
@@ -35,6 +37,8 @@
    - Cost if wrong: moderate. Coupling flags to the win condition makes flag
      state part of the core logic rather than a marking layer, and adds a second
      win path that needs its own tests.
+
+  > Decision: Use proposed fallback.
 
 ### Topic: How tests run without a build step
 
@@ -49,6 +53,8 @@
      be assumed to have Node, the alternative is a `tests.html` page opened in
      the browser with a small hand-written assertion harness, which changes the
      test file format but not the logic under test.
+
+  > Decision: Used proposed fallback.
 
 4. Related and load-bearing: a browser blocks `<script type="module">` and all
    ES module imports when the page is opened over `file://`, which is exactly
@@ -68,6 +74,8 @@
      everything into one HTML file would make the logic untestable from Node and
      force answer 3 to the browser-harness option.
 
+  > Decision: Use proposed fallback.
+
 ### Topic: Marking suspected mines
 
 5. What are the marking states, and does a marked cell resist being revealed?
@@ -78,6 +86,8 @@
      mark is a contained change to one transition, though it does invalidate the
      tests written for the toggle.
 
+  > Decision: Use proposed fallback
+
 6. When a zero-count cascade reaches a cell the player has marked, does it
    reveal that cell or stop there?
    - Proposed fallback: the cascade stops at marked cells and leaves them
@@ -86,6 +96,8 @@
    - Cost if wrong: low mechanically, but this is a genuine edge case that will
      be encoded directly in the flood-fill test fixtures, so it is worth
      deciding before those are written.
+
+  > Decision: As mentioned before the flag state is just for the user.  If they marked a cell incorrectly, the cascade should unflag and reveal.  Then continue as if it wasn't flagged at all.
 
 ### Topic: Input
 
@@ -96,6 +108,8 @@
      toggles a mark on the focused cell. No other bindings.
    - Cost if wrong: trivial. Bindings live in one input-handling map.
 
+  > Decision: Use proposed fallback.
+
 8. Is mouse or touch input supported as well? The spec never mentions it, but
    the non-goals exclude "chording (revealing neighbours by clicking a
    satisfied number)", which reads as though clicking exists.
@@ -104,6 +118,8 @@
      fully sufficient on its own, so the keyboard-only constraint still holds.
    - Cost if wrong: low. Dropping pointer support later is deletion; adding it
      later is a small, isolated addition to the same event layer.
+
+  > Decision: Use proposed fallback.
 
 ### Topic: End of game
 
@@ -114,6 +130,8 @@
      shown as incorrect, and a "You lose" status message is displayed.
    - Cost if wrong: low. Purely presentational and confined to the render layer.
 
+  > Decision: Use proposed fallback.
+
 10. Can the player start over without reloading the page? The board is fixed,
     so a restart replays the same layout.
     - Proposed fallback: yes — a "New game" button, plus an `R` key binding,
@@ -121,6 +139,8 @@
       state. Nothing persists between games, per the non-goals.
     - Cost if wrong: low. If restart is dropped, page reload is the only reset
       and the button and its reset path are removed.
+
+  > Decision: Add a "New game" button but don't add the suggested `R` key binding.  Accidentally typing `R` and restarting a game you were about to win would be disappointing.
 
 ## Useful Clarifications
 
@@ -131,6 +151,8 @@
     - Proposed fallback: yes, a simple counter above the board. It is a marking
       aid, not a score or timer, so it does not conflict with the non-goals.
     - Cost if wrong: trivial. One element in the status area.
+
+  > Decision: Use proposed fallback
 
 12. The acceptance criteria say "Every revealed safe cell displays its
     adjacent-mine count", which read literally means a zero-count cell renders
@@ -143,6 +165,8 @@
       the acceptance criterion is not read as failing when the board looks
       correct.
 
+  > Decision: Use proposed fallback
+
 13. How far should accessibility go beyond keyboard operation? Screen-reader
     announcements are neither required nor excluded by the spec.
     - Proposed fallback: build the board as a `role="grid"` with roving
@@ -153,6 +177,8 @@
       focus and announcement handling would have to be retrofitted through the
       render layer.
 
+  > Decision: Use proposed fallback
+
 14. Is there a preferred shape for the board logic's public surface, given
     tests are written against it directly?
     - Proposed fallback: a small module exposing board creation from the fixed
@@ -162,12 +188,16 @@
     - Cost if wrong: low, but it is the interface every test line touches, so
       renaming later is a wide mechanical edit.
 
+  > Decision: Use proposed fallback
+
 15. Any constraints on visual styling — cell size, colour coding of the digits
     1–8, light or dark background?
     - Proposed fallback: a single plain stylesheet, classic per-digit colours,
       a clearly visible focus outline on the cursor cell, and no theme switching.
       No animations, per the non-goals.
     - Cost if wrong: trivial and cosmetic.
+
+  > Decision: Use proposed fallback
 
 ## How to Answer
 
