@@ -424,6 +424,55 @@ test('the test suite never loads ui.js', () => {
   assert.deepEqual(loaded, [], 'ui.js must stay out of the test runner');
 });
 
+// The renderer is covered by browser.test.js, which drives a real Chrome. That
+// coverage is worth having only as long as it stays free: the moment it needs
+// an install, `node --test` stops being the whole story and the spec's "nothing
+// is installed" promise is gone. These two scans are what keep it honest.
+test('the browser driver installs nothing', () => {
+  const projectRoot = path.join(__dirname, '..');
+
+  assert.ok(
+    !fs.existsSync(path.join(projectRoot, 'package.json')),
+    'a package.json would mean the suite has dependencies to install',
+  );
+  assert.ok(
+    !fs.existsSync(path.join(projectRoot, 'node_modules')),
+    'node_modules would mean the suite has dependencies to install',
+  );
+
+  for (const file of ['tools/chrome-driver.js', 'test/browser.test.js']) {
+    const modules = [...readProjectFile(file).matchAll(/require\(\s*'([^']+)'\s*\)/g)];
+    assert.ok(modules.length > 0, `${file} must exist and require something`);
+
+    for (const [, id] of modules) {
+      assert.ok(
+        id.startsWith('node:') || id.startsWith('.'),
+        `${file} must require only Node built-ins and project files, not ${id}`,
+      );
+    }
+  }
+});
+
+test('the renderer tests skip rather than fail when no browser is present', () => {
+  const source = withoutJsComments(readProjectFile('test/browser.test.js'));
+
+  // The skip reason is computed from whether a browser was found, and every
+  // test carries it. A test that forgot the option would fail the whole run on
+  // a machine without Chrome, which is the one thing this coverage must not do.
+  assert.ok(
+    /findChrome\(\)/.test(source),
+    'the renderer tests must decide to run by looking for a browser',
+  );
+
+  const declared = source.match(/\btest\(/g) || [];
+  const guarded = source.match(/\{\s*skip\s*\}/g) || [];
+  assert.equal(
+    guarded.length,
+    declared.length,
+    'every renderer test must carry the skip guard',
+  );
+});
+
 // HTML comments cannot make the browser load anything, but they can mention
 // the very syntax these scans forbid, so strip them before matching.
 const withoutHtmlComments = (html) => html.replace(/<!--[\s\S]*?-->/g, '');
@@ -490,13 +539,17 @@ test('index.html links the stylesheet and provides the elements ui.js renders in
 // (an identifier spelled a particular way, a declaration in a particular
 // position, `var` rather than `const`) went red on refactors that broke
 // nothing, so they are gone. What none of this can do is notice a renderer
-// that is simply broken; that gap belongs to the browser sweep and is on the
-// debt register in the final review.
+// that is simply broken. That gap is browser.test.js's job, and these scans
+// are now only what a browser cannot check: syntax the files must never
+// contain, whether or not a Chrome is installed on the machine.
 
 // Strips comments so the scans read code only: a comment may legitimately
-// mention the very syntax they forbid.
+// mention the very syntax they forbid. A `//` preceded by a colon is a URL
+// scheme (`file://`), not the start of a comment.
 const withoutJsComments = (source) =>
-  source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
 
 // The body of the first listener registered for one event type, found by brace
 // matching from its callback. Position-independent, so moving the listener

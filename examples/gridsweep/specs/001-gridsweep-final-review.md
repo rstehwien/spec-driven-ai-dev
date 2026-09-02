@@ -290,8 +290,48 @@ What this pass did **not** fix, because it is what the review said it was: the
 suite still cannot notice a broken renderer. Debt item 1 is the fix, its
 decision is recorded, and it is the natural next pass.
 
+## Improvement pass 02 — applied 2026-09-02
+
+Bounded pass covering technical debt register items **1** and **3**, the two
+left open after pass 01. Full detail and evidence are in
+[001-gridsweep-plan.md](001-gridsweep-plan.md) under "Improvement pass 02".
+
+| Item | Decision | State |
+| --- | --- | --- |
+| Debt 1 — promote the browser driver into the repo | promote it | done |
+| Debt 3 — criterion 6 has two readings | close in spec, code as source of truth | done |
+| Debt 2 — brittle source-grep tests | cleanup | done in pass 01 |
+| Debt 4 — manual verification artifacts are gone | acceptable for a demo | no action |
+
+The driver is `tools/chrome-driver.js` and the coverage is
+`test/browser.test.js`, nine tests that open `index.html` over `file://` in
+headless Chrome, drive it with real key and mouse events, and assert only
+against the DOM. Both are Node built-ins only — the driver speaks the DevTools
+protocol over Chrome's pipe transport rather than a WebSocket, which is what
+lets it add no package while still working on Node 18.
+
+`node --test` after the pass: `tests 54 / pass 54 / fail 0`, about 2.3s. On a
+machine with no browser: `pass 45 / skipped 9 / fail 0`, exit `0`.
+
+The debt is genuinely paid rather than merely addressed: of thirteen renderer
+mutations tried on scratch copies, **eleven were invisible to the old suite and
+all thirteen are caught now** — a board that draws nothing, a flag that does not
+appear, a status line that stays empty, a cursor that wraps, labels that stop
+describing cells, a context menu that opens. The table is in the plan.
+
+Criterion 6 is closed in the spec the way the review recommended and the
+developer decided: reveal and mark go inert at the end, cursor movement stays
+live so the finished board can be read, and the reason — not trapping a
+screen-reader user inside the `role="grid"` — is written down next to the rule.
+
+No shipped file changed. `board.js`, `ui.js`, `styles.css` and `index.html` are
+byte-for-byte what pass 01 left, which is what makes the mutation table
+meaningful.
+
 ## Approval state
 
 - draft pending user review
 - approved by developer, with decisions recorded inline
 - improvement pass 01 applied 2026-09-02; debt items 1 and 3 still open
+- improvement pass 02 applied 2026-09-02; all four debt register items now
+  closed or explicitly accepted

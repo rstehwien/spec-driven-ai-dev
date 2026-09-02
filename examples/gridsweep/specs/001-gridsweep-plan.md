@@ -832,3 +832,168 @@ behaviour change intended.
   notice a renderer that is simply broken, because it never loads `ui.js`. The
   browser driver used above is in the session scratchpad, not the repo. Debt
   register item 1 is the fix and is the natural next pass.
+
+## Improvement pass 02 - renderer coverage and the last open reading
+
+Bounded pass run 2026-09-02 against the approved spec and this plan. Scope was
+technical debt register items **1** and **3** in
+[001-gridsweep-final-review.md](001-gridsweep-final-review.md), and nothing
+else. Constraint set by the developer: item 1 must add no npm package and must
+not break `node --test` on a machine with no Chrome.
+
+Item 3 required a spec change, which the developer's decision authorises
+("close in spec with code as source of truth"). Item 1 required a smaller one:
+the spec said `ui.js` "is never loaded by the tests", and a browser test loads
+it in a browser.
+
+### Tasks
+- [x] promote the Phase 05 headless-Chrome driver from the scratchpad into the repo
+- [x] write it with Node built-ins only -- no package.json, no dependency, no install
+- [x] cover renderer behaviour with it: first render, keyboard, mouse, cascade,
+      both endings, inertness, and reset
+- [x] skip those tests, rather than fail them, when no browser is present
+- [x] guard the no-install promise from the Node side so it cannot quietly erode
+- [x] close acceptance criterion 6 in the spec, with the shipped behaviour as
+      the source of truth
+- [x] record in the spec that the renderer is covered by a browser, not a stub
+- [x] prove the new coverage catches renderer breakage the old suite missed
+
+### What changed
+
+`tools/chrome-driver.js` (new, 416 lines)
+- Finds a browser (`CHROME_PATH` first, then the usual macOS, Linux and Windows
+  locations) and returns `null` rather than throwing when there is none, so
+  "no Chrome here" can be a skip instead of a failure.
+- Speaks the DevTools protocol over Chrome's **pipe transport**
+  (`--remote-debugging-pipe`): NUL-terminated JSON on the child's fd 3 and 4.
+  That is the design decision that makes the no-dependency constraint hold. The
+  usual route is a WebSocket to `/json/list`, and Node has no WebSocket client
+  before v21 -- so the alternatives were a package, a hand-rolled WebSocket
+  with its own masking and framing, or dropping the spec's "Node 18 or newer".
+  The pipe needs none of them.
+- Every command carries a 20s timeout, so a wedged browser fails loudly instead
+  of parking `node --test` forever.
+- Launches into a fresh temp profile and removes it on close, and registers a
+  `process.on('exit')` cleanup so a test run that dies mid-way still kills the
+  browser and takes the profile with it. Verified: after a deliberately crashed
+  run, zero browser processes and zero temp directories remain.
+- Collects `Runtime.exceptionThrown`, `console.error`, and error-level
+  `Log.entryAdded` into `page.problems`, which two tests assert is empty.
+
+`test/browser.test.js` (new, 408 lines, 9 tests)
+- Opens `index.html` over `file://` -- the way the spec says the game is
+  delivered -- and drives it with real `Input.dispatchKeyEvent` and
+  `Input.dispatchMouseEvent`.
+- Every assertion reads the DOM: class names, text, `aria-label`, the status
+  line, the counter, `document.activeElement`, and `getComputedStyle`. The page
+  no longer publishes the game object, so there is nothing else to read.
+- Expectations (the ten mine coordinates, the twelve-cell cascade) are written
+  out from the spec by hand, exactly as `board.test.js` does, so a regression in
+  `board.js` cannot redefine what the screen ought to show.
+- What it covers: the first render of all 64 cells with their labels; Tab
+  reaching the board and arrows clamping at all four edges; marking, the
+  counter, and a mark blocking a direct reveal; the twelve-cell cascade
+  clearing a mark and drawing its digits; left click revealing, right click
+  marking, and the context menu suppressed; the loss opening all ten mines with
+  exactly one exploded and a wrong mark shown; reveal and mark inert afterwards
+  while the cursor still moves; New game returning a clean board without
+  stealing focus from the button; and a full 54-cell keyboard win with two
+  marks still standing.
+- Two of the CSS claims `board.test.js` can only make about the file are made
+  here against `getComputedStyle`, which is the browser's own answer.
+
+`test/board.test.js`
+- Two new tests. `'the browser driver installs nothing'` fails if a
+  `package.json` or `node_modules` appears, or if either new file requires
+  anything but a `node:` built-in or a project file. `'the renderer tests skip
+  rather than fail when no browser is present'` fails if any test in
+  `browser.test.js` loses its skip guard.
+- `withoutJsComments` no longer treats the `//` in `file://` as the start of a
+  comment. It was stripping the rest of any line containing a URL.
+- The comment that recorded the renderer gap as debt now points at
+  `browser.test.js` and says what the source scans are still for.
+
+`specs/001-gridsweep-spec.md`
+- Acceptance criterion 6 now reads: revealing and marking have no effect once
+  the game has ended; moving the cursor is the deliberate exception so the
+  finished board can be read. The Input section carries the rule and the
+  reason -- locking navigation traps a screen-reader user inside the
+  `role="grid"`.
+- Structure and testing: `ui.js` "is never loaded into the Node test process",
+  is not stubbed with a fake DOM either, and is covered by driving a real
+  browser. A new bullet describes that coverage and its two promises: built-ins
+  only, and skip rather than fail without a browser.
+- A ninth acceptance criterion: the renderer has automated coverage where a
+  browser is available, and the suite still passes where one is not.
+
+### Evidence
+
+- `node --test` → `tests 54 / pass 54 / fail 0`, exit `0`, about 2.3s. Five
+  consecutive runs, identical.
+- With no browser on the machine (the candidate list emptied on a scratch
+  copy): `tests 54 / pass 45 / fail 0 / skipped 9`, exit `0`. The developer's
+  constraint holds.
+- **The debt item is actually paid.** Thirteen renderer mutations, each on its
+  own scratch copy, run against both suites:
+
+  | mutation to `ui.js` / `styles.css` | `board.test.js` | `browser.test.js` |
+  | --- | --- | --- |
+  | cells never draw their glyph or digit | green | **red** |
+  | a mark shows no flag | green | **red** |
+  | the mine that ended the game is not singled out | green | **red** |
+  | the counter ignores the marks placed | green | **red** |
+  | the end status line stays empty | green | **red** |
+  | the roving tabindex never leaves the first cell | green | **red** |
+  | the cursor wraps at the board edges | green | **red** |
+  | cells stop describing themselves to a screen reader | green | **red** |
+  | the context menu is no longer suppressed | green | **red** |
+  | a wrong mark is drawn as an ordinary hidden cell | green | **red** |
+  | the board is never marked as locked at the end | green | **red** |
+  | a restart key is added to the keyboard handler | red | **red** |
+  | the exploded mine is painted like every other mine | red | **red** |
+
+  Eleven of thirteen were invisible to the old suite. The two it already caught
+  are caught by both.
+- The two new guards were checked the same way, each on its own scratch copy:
+  adding a `package.json`, adding a `node_modules`, adding `require('ws')` to
+  the driver, and removing one test's skip guard each turn `board.test.js` red.
+- No leaks. After a normal run and after a deliberately crashed run, zero
+  `gridsweep-chrome-*` processes and zero temp profiles remain.
+
+### Out of scope
+- Debt register item 4 (the lost Phase 05 screenshots). The developer's
+  decision stands: fine for a demo, regenerable.
+- Any change to `board.js`, `ui.js`, `styles.css` or `index.html`. This pass
+  changed no shipped file, which is what lets the mutation table above mean
+  something.
+- Screenshot comparison or any form of visual regression testing. The tests
+  assert structure, text, labels and computed colours, not pixels.
+
+### Risks / blockers
+- None open. Two known limits, both deliberate:
+  - Where a browser exists but cannot launch, the tests fail rather than skip.
+    That is the intended split: a missing browser is the reviewer's
+    environment, a broken one is a real problem and should be loud.
+  - The renderer coverage runs against whatever Chrome the machine has. It
+    asserts nothing version-specific -- no pixels, no vendor prefixes -- but it
+    is not pinned, and a spec's worth of browser behaviour is assumed.
+
+### Notes
+- **A Chrome quirk shaped the driver's API, and it is worth knowing about.**
+  When a key event reaches the browser unconsumed -- no `preventDefault`, no
+  renderer-side default action -- headless Chrome's acknowledgement of
+  `Input.dispatchKeyEvent` stalls for seconds and sometimes past any sane
+  timeout. It is reproducible on `about:blank` with none of this project's code
+  loaded, so it is the browser's input plumbing, not the game. Dispatching
+  without awaiting the ack is worse: it desynchronises keydown from keyup and
+  Chrome produces an auto-repeat storm (26,001 events from 16 dispatches, once
+  measured). So `press()` is for keys the page consumes, and `pressIgnoredKey()`
+  dispatches a `KeyboardEvent` at the focused element for keys the game is
+  meant to ignore -- which is only `r` and `Escape`, in the one test that
+  checks unbound keys do nothing. Every key the game actually binds goes
+  through the real input pipeline.
+- The driver is deliberately not general. It knows how to open a page, send
+  input, evaluate an expression and read the result. It knows no game rule and
+  no selector from this project; those live in the test file.
+- `tools/` is outside `test/`, so `node --test` never mistakes the driver for a
+  test file.

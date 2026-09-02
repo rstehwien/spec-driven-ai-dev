@@ -57,6 +57,19 @@ Use the human-gated-spec-driven-ai-development skill to final-review for 001-gri
 Created 001-gridsweep-final-review.md
 
 #11
+Added notes to 001-gridsweep-final-review.md
 ```
-Use the human-gated-spec-driven-ai-development skill to make a bounded improvement pass for 001-gridsweep-plan.md covering the Important improvements and Cleanup opportunities in 001-gridsweep-final-review.md
+Use the human-gated-spec-driven-ai-development skill to make a bounded
+improvement pass for 001-gridsweep-plan.md covering the Important improvements
+and Cleanup opportunities in 001-gridsweep-final-review.md
+```
+
+#12
+The previous improvement pass skipped two improvement items so we will get them fixed
+```
+Use the human-gated-spec-driven-ai-development skill to make a bounded
+improvement pass for 001-gridsweep-plan.md covering technical debt items 1
+and 3 in 001-gridsweep-final-review.md
+
+Item 1 must not add npm packages or break `node --test` where Chrome is absent.
 ```

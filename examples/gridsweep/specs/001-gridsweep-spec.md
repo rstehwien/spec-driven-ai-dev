@@ -62,6 +62,11 @@ revealing every safe cell ends it as a win.
 - Mouse and touch input are also supported: left click reveals, right click
   toggles a mark, and the browser context menu is suppressed over the board.
   Keyboard input remains fully sufficient on its own.
+- Once the game has ended, reveal and mark go inert but the cursor keeps
+  moving. Arrow keys and clicks still move it, and the roving `tabindex` moves
+  with it, so a finished board can be read cell by cell. Locking navigation
+  would trap a screen-reader user inside the `role="grid"` with no way to hear
+  where the mines were.
 
 ### Structure and testing
 
@@ -74,7 +79,9 @@ revealing every safe cell ends it as a win.
   CommonJS in Node.
 - ES module `import` / `export` must not be used anywhere the browser loads,
   because a page opened over `file://` blocks module scripts.
-- All DOM code lives in `ui.js` and is never loaded by the tests.
+- All DOM code lives in `ui.js` and is never loaded into the Node test process.
+  It is not stubbed with a fake DOM either; it is covered by driving a real
+  browser, described below.
 - The board logic's public surface is board creation from the fixed layout plus
   `reveal(row, column)`, `toggleMark(row, column)`, and a readable state
   snapshot. All state transitions are pure with respect to the DOM.
@@ -84,6 +91,12 @@ revealing every safe cell ends it as a win.
   the reviewer's machine.
 - The board logic must be covered by automated tests that a reviewer can run and
   watch pass before approving any phase.
+- Renderer behaviour is covered by a headless-browser test in the same
+  `node --test` run. It opens `index.html` over `file://`, drives it with real
+  key and mouse events, and asserts only against the DOM, never against the
+  game object. It is written with Node built-ins only, so it installs nothing,
+  and it skips itself when no Chrome or Chromium is on the machine — a reviewer
+  without a browser still gets a passing suite and a zero exit code.
 
 ### Presentation
 
@@ -127,8 +140,11 @@ revealing every safe cell ends it as a win.
 - Revealing a safe cell with a zero count cascades to reveal the surrounding
   region, unmarking and revealing any marked cells the cascade reaches.
 - A direct reveal of a marked cell has no effect until the mark is removed.
-- Once the game has ended, further input has no effect until "New game" is
-  pressed.
+- Once the game has ended, revealing and marking have no effect until "New game"
+  is pressed. Moving the cursor is the deliberate exception: it stays live so
+  the finished board can be read.
 - The game is fully playable using only the keyboard.
 - The board logic has automated test coverage runnable with `node --test`, and
   the suite passes.
+- The renderer has automated coverage in the same run wherever a browser is
+  available, and the suite still passes where one is not.
