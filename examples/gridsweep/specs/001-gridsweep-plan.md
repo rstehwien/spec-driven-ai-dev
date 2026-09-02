@@ -51,18 +51,18 @@ a Node `require` target, and have it build the fixed board with correct
 adjacency counts.
 
 ### Tasks
-- [ ] Create `board.js` holding the fixed 8x8 layout, board construction, and
+- [x] Create `board.js` holding the fixed 8x8 layout, board construction, and
       adjacency-count computation, with no DOM references.
-- [ ] Give `board.js` a single global assignment for the browser and a
+- [x] Give `board.js` a single global assignment for the browser and a
       `if (typeof module !== 'undefined') module.exports = ...` tail for Node.
-- [ ] Create `test/board.test.js` using `node:test` and `node:assert/strict`;
+- [x] Create `test/board.test.js` using `node:test` and `node:assert/strict`;
       write failing tests first for mine placement, mine count, safe-cell
       count, and the full adjacency grid above.
-- [ ] Implement until those tests pass; run `node --test`.
-- [ ] Create a minimal `index.html` that loads `board.js` as a classic script
+- [x] Implement until those tests pass; run `node --test`.
+- [x] Create a minimal `index.html` that loads `board.js` as a classic script
       and renders a plain text dump of the board state, purely to confirm the
       page works when opened directly from disk.
-- [ ] Open `index.html` from the filesystem and confirm no console errors and
+- [x] Open `index.html` from the filesystem and confirm no console errors and
       no module/CORS failure.
 
 ### Acceptance criteria
@@ -247,7 +247,42 @@ the spec end to end.
 
 ## Implementation evidence
 
-- Phase 01: not started.
+- Phase 01: complete (2026-09-01). Built red/green.
+  - Files created: `board.js`, `test/board.test.js`, `index.html` (throwaway
+    Phase 01 stub, replaced in Phase 03).
+  - Red: `test/board.test.js` was written first and failed with
+    `MODULE_NOT_FOUND` before `board.js` existed.
+  - Green: `node --test` reports `pass 7 / fail 0` and exits `0`.
+  - Tests assert the ten mine coordinates (as an exact ordered list), 10 mines,
+    54 safe cells, the complete 8x8 adjacency grid, that every cell starts
+    hidden and unmarked, and that two games do not share cell state.
+  - The adjacency fixture in this plan was recomputed independently from the
+    spec's ten mine coordinates before being hard-coded into the tests; it
+    matched exactly.
+  - A source-scanning test asserts `board.js` contains no `document`, `window`,
+    or `navigator` references and no `import` / `export`, so the `file://`
+    delivery constraint is now enforced by the suite rather than by review.
+  - Dual load proved both ways: Node `require` (the suite itself), and a
+    classic-script load simulated in a `vm` context with no `module`,
+    `require`, or `exports` in scope, which still assigns the `Gridsweep`
+    global.
+  - `file://` load verified in Chrome (headless, new mode) against
+    `file:///Users/res/gridsweep-demo/index.html`: the page rendered the full
+    board dump, matching the fixture grid exactly. A throwaway probe page
+    installed `window.onerror`, a capturing `error` listener, and
+    `console.error` / `console.warn` shims before loading `board.js`; it
+    recorded no events other than its own success line, so the page console is
+    clean and there was no module or CORS failure. The probe was deleted
+    afterwards and is not part of the deliverable.
+  - Public surface so far: `Gridsweep.createGame()` returning an object with
+    `snapshot()`. The snapshot is a deep copy, exposing per cell `mine`,
+    `adjacent`, `revealed`, and `marked`, plus `rows`, `columns`, and
+    `mineCount`. `reveal`, `toggleMark`, reset, and game status are Phase 02.
+  - Deviation from the plan text, deliberate: the layout is stored in
+    `board.js` as an array of eight 8-character strings rather than the spec's
+    spaced grid, which is the same data in a form the code can index directly.
+    Mine placement is asserted against the spec's coordinates, so the two
+    representations are held equal by test.
 - Phase 02: not started.
 - Phase 03: not started.
 - Phase 04: not started.
@@ -264,10 +299,15 @@ the spec end to end.
 
 ## User gate
 
-- Review this plan, particularly the phase boundaries and whether Phase 01's
-  throwaway `index.html` stub is worth the step.
-- If approved, this is a good point for a checkpoint commit of the working spec
-  and plan before implementation begins.
+- Phase 01 is implemented and awaiting your review. Review `board.js`,
+  `test/board.test.js`, and the throwaway `index.html` stub, and run
+  `node --test` yourself to watch the suite pass.
+- Worth deciding: whether the snapshot exposing `mine` on hidden cells is
+  acceptable. The fixed layout ships in source anyway so nothing is concealed
+  by hiding it, but if you would rather the snapshot omit `mine` until a cell
+  is revealed or the game ends, say so before Phase 02 builds on it.
+- This is a good point for a checkpoint commit before Phase 02.
 - Next stage if approved:
   `Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-gridsweep-plan.md`
-- If you want changes instead, ask for plan revisions rather than implementation.
+- If you want AI-assisted formal review of this phase first:
+  `Use the human-gated-spec-driven-ai-development skill to review-phase for 001-gridsweep-plan.md`

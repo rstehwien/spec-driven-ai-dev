@@ -19,3 +19,8 @@ Folded answers into spec.
 Use the human-gated-spec-driven-ai-development skill to generate-plan for 001-gridsweep-spec.md
 ```
 001-gridsweep-plan.md.  I reviewed.
+
+#5
+```
+Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-gridsweep-plan.md
+```
