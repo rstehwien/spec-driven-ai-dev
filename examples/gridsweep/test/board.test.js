@@ -117,3 +117,264 @@ test('board.js is DOM-free and free of ES module syntax', () => {
   assert.ok(!/^\s*import\s/m.test(source), 'board.js must not use import');
   assert.ok(!/^\s*export\s/m.test(source), 'board.js must not use export');
 });
+
+// ---------------------------------------------------------------------------
+// Phase 02: reveal, marking, cascade, and end states.
+// ---------------------------------------------------------------------------
+
+// Both cascade regions on the shipped board, written out by hand from the
+// adjacency grid above rather than produced by the flood fill under test.
+const CASCADE_FROM_0_0 = [
+  [0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5],
+  [1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5],
+];
+
+const CASCADE_FROM_6_7 = [
+  [5, 6], [5, 7], [6, 6], [6, 7], [7, 6], [7, 7],
+];
+
+const revealedCoordinates = (snapshot) => {
+  const out = [];
+  for (let row = 0; row < 8; row += 1) {
+    for (let column = 0; column < 8; column += 1) {
+      if (snapshot.cells[row][column].revealed) out.push([row, column]);
+    }
+  }
+  return out;
+};
+
+const markedCoordinates = (snapshot) => {
+  const out = [];
+  for (let row = 0; row < 8; row += 1) {
+    for (let column = 0; column < 8; column += 1) {
+      if (snapshot.cells[row][column].marked) out.push([row, column]);
+    }
+  }
+  return out;
+};
+
+// Reveals every safe cell that a direct reveal will accept. Marked cells are
+// skipped, since a direct reveal of a marked cell is specified as a no-op.
+const revealAllSafeCells = (game) => {
+  for (const [row, column] of allCoordinates()) {
+    const cell = game.snapshot().cells[row][column];
+    if (cell.mine || cell.revealed || cell.marked) continue;
+    game.reveal(row, column);
+  }
+  return game.snapshot();
+};
+
+function allCoordinates() {
+  const out = [];
+  for (let row = 0; row < 8; row += 1) {
+    for (let column = 0; column < 8; column += 1) out.push([row, column]);
+  }
+  return out;
+}
+
+test('a game starts in progress with no losing cell', () => {
+  const snapshot = Gridsweep.createGame().snapshot();
+
+  assert.equal(snapshot.status, 'in-progress');
+  assert.equal(snapshot.losingCell, null);
+});
+
+test('revealing a safe cell with a non-zero count reveals only that cell', () => {
+  const game = Gridsweep.createGame();
+
+  const snapshot = game.reveal(2, 5);
+
+  assert.deepEqual(revealedCoordinates(snapshot), [[2, 5]]);
+  assert.equal(snapshot.cells[2][5].adjacent, 3);
+  assert.equal(snapshot.status, 'in-progress');
+});
+
+test('revealing a mine loses the game and records the triggering mine', () => {
+  const game = Gridsweep.createGame();
+
+  const snapshot = game.reveal(4, 1);
+
+  assert.equal(snapshot.status, 'lost');
+  assert.deepEqual(snapshot.losingCell, { row: 4, column: 1 });
+  assert.equal(snapshot.cells[4][1].revealed, true);
+});
+
+test('toggleMark is a two-state toggle', () => {
+  const game = Gridsweep.createGame();
+
+  assert.equal(game.toggleMark(3, 3).cells[3][3].marked, true);
+  assert.equal(game.toggleMark(3, 3).cells[3][3].marked, false);
+  assert.equal(game.toggleMark(3, 3).cells[3][3].marked, true);
+});
+
+test('a direct reveal of a marked cell has no effect', () => {
+  const game = Gridsweep.createGame();
+  game.toggleMark(2, 5);
+
+  const snapshot = game.reveal(2, 5);
+
+  assert.equal(snapshot.cells[2][5].revealed, false);
+  assert.equal(snapshot.cells[2][5].marked, true);
+  assert.equal(snapshot.status, 'in-progress');
+});
+
+test('a direct reveal of a marked mine does not lose the game', () => {
+  const game = Gridsweep.createGame();
+  game.toggleMark(4, 1);
+
+  const snapshot = game.reveal(4, 1);
+
+  assert.equal(snapshot.status, 'in-progress');
+  assert.equal(snapshot.cells[4][1].revealed, false);
+});
+
+test('marking is rejected on an already-revealed cell', () => {
+  const game = Gridsweep.createGame();
+  game.reveal(2, 5);
+
+  const snapshot = game.toggleMark(2, 5);
+
+  assert.equal(snapshot.cells[2][5].marked, false);
+  assert.equal(snapshot.cells[2][5].revealed, true);
+});
+
+test('a zero-count reveal cascades across the top-left region', () => {
+  const game = Gridsweep.createGame();
+
+  const snapshot = game.reveal(0, 0);
+
+  assert.deepEqual(revealedCoordinates(snapshot), CASCADE_FROM_0_0);
+  assert.equal(snapshot.status, 'in-progress');
+});
+
+test('a zero-count reveal cascades across the bottom-right region', () => {
+  const game = Gridsweep.createGame();
+
+  const snapshot = game.reveal(6, 7);
+
+  assert.deepEqual(revealedCoordinates(snapshot), CASCADE_FROM_6_7);
+});
+
+test('the cascade region is the same whichever zero cell starts it', () => {
+  const fromCorner = Gridsweep.createGame().reveal(0, 0);
+  const fromMiddle = Gridsweep.createGame().reveal(0, 3);
+
+  assert.deepEqual(
+    revealedCoordinates(fromMiddle),
+    revealedCoordinates(fromCorner),
+  );
+});
+
+test('a cascade unmarks the marked cells it reaches and continues past them', () => {
+  const game = Gridsweep.createGame();
+  // (0,2) is a zero cell inside the region and (1,3) is a border cell of it.
+  // Marking both proves the cascade neither stops at a mark nor leaves one.
+  game.toggleMark(0, 2);
+  game.toggleMark(1, 3);
+
+  const snapshot = game.reveal(0, 0);
+
+  assert.deepEqual(revealedCoordinates(snapshot), CASCADE_FROM_0_0);
+  assert.deepEqual(markedCoordinates(snapshot), []);
+});
+
+test('revealing all 54 safe cells with no marks placed wins', () => {
+  const game = Gridsweep.createGame();
+
+  const snapshot = revealAllSafeCells(game);
+
+  assert.equal(snapshot.status, 'won');
+  assert.equal(revealedCoordinates(snapshot).length, 54);
+});
+
+test('the win still fires with all ten marks sitting on mines', () => {
+  const game = Gridsweep.createGame();
+  for (const [row, column] of MINES) game.toggleMark(row, column);
+
+  const snapshot = revealAllSafeCells(game);
+
+  assert.equal(snapshot.status, 'won');
+  assert.equal(markedCoordinates(snapshot).length, 10);
+});
+
+test('the win still fires when ten marks were placed on safe cells', () => {
+  const game = Gridsweep.createGame();
+  // Ten wrong marks, all inside the top-left cascade region, so the cascade
+  // clears them on its way through and the game is still winnable.
+  const wrong = [
+    [0, 1], [0, 2], [0, 3], [0, 4], [0, 5],
+    [1, 0], [1, 1], [1, 2], [1, 3], [1, 4],
+  ];
+  for (const [row, column] of wrong) game.toggleMark(row, column);
+
+  const snapshot = revealAllSafeCells(game);
+
+  assert.equal(snapshot.status, 'won');
+  assert.equal(revealedCoordinates(snapshot).length, 54);
+});
+
+test('marking every mine does not by itself win the game', () => {
+  const game = Gridsweep.createGame();
+
+  let snapshot = game.snapshot();
+  for (const [row, column] of MINES) snapshot = game.toggleMark(row, column);
+
+  assert.equal(snapshot.status, 'in-progress');
+});
+
+test('all input is inert once the game is lost', () => {
+  const game = Gridsweep.createGame();
+  game.reveal(4, 1);
+  const lost = game.snapshot();
+
+  game.reveal(0, 0);
+  game.toggleMark(3, 3);
+
+  assert.deepEqual(game.snapshot(), lost);
+});
+
+test('all input is inert once the game is won', () => {
+  const game = Gridsweep.createGame();
+  revealAllSafeCells(game);
+  const won = game.snapshot();
+
+  game.reveal(4, 1);
+  game.toggleMark(3, 3);
+
+  assert.deepEqual(game.snapshot(), won);
+});
+
+test('reset returns every cell to hidden and unmarked and clears the end state', () => {
+  const game = Gridsweep.createGame();
+  game.toggleMark(3, 3);
+  game.reveal(4, 1);
+
+  const snapshot = game.reset();
+
+  assert.equal(snapshot.status, 'in-progress');
+  assert.equal(snapshot.losingCell, null);
+  assert.deepEqual(revealedCoordinates(snapshot), []);
+  assert.deepEqual(markedCoordinates(snapshot), []);
+  assert.deepEqual(snapshot, Gridsweep.createGame().snapshot());
+});
+
+test('the board is playable again after a reset', () => {
+  const game = Gridsweep.createGame();
+  game.reveal(4, 1);
+  game.reset();
+
+  const snapshot = game.reveal(0, 0);
+
+  assert.deepEqual(revealedCoordinates(snapshot), CASCADE_FROM_0_0);
+});
+
+test('out-of-bounds coordinates are ignored', () => {
+  const game = Gridsweep.createGame();
+  const before = game.snapshot();
+
+  game.reveal(-1, 0);
+  game.reveal(0, 8);
+  game.toggleMark(8, 8);
+
+  assert.deepEqual(game.snapshot(), before);
+});

@@ -93,24 +93,24 @@ Goal: complete the board logic state machine behind the spec's public surface,
 fully covered by tests, with no DOM involvement.
 
 ### Tasks
-- [ ] Add failing tests for direct `reveal(row, column)` of a safe cell with a
+- [x] Add failing tests for direct `reveal(row, column)` of a safe cell with a
       non-zero count, and for `reveal` of a mine ending the game as a loss with
       the triggering mine recorded.
-- [ ] Add failing tests for `toggleMark(row, column)` as a two-state toggle,
+- [x] Add failing tests for `toggleMark(row, column)` as a two-state toggle,
       for a direct reveal of a marked cell being a no-op, and for marking being
       rejected on an already-revealed cell.
-- [ ] Add failing tests for zero-count cascade using both fixture regions
+- [x] Add failing tests for zero-count cascade using both fixture regions
       above, including that a cascade passing through a marked cell unmarks it,
       reveals it, and continues.
-- [ ] Add failing tests for the win condition: revealing all 54 safe cells wins
+- [x] Add failing tests for the win condition: revealing all 54 safe cells wins
       with zero marks placed, and also wins with all ten marks placed on safe
       cells.
-- [ ] Add failing tests that all input is inert once the game has ended, in
+- [x] Add failing tests that all input is inert once the game has ended, in
       both the won and lost states, and that a reset returns every cell to
       hidden and unmarked and clears the end state.
-- [ ] Implement `reveal`, `toggleMark`, reset, and the readable state snapshot
+- [x] Implement `reveal`, `toggleMark`, reset, and the readable state snapshot
       until the suite is green; refactor with tests passing.
-- [ ] Run the full `node --test` suite.
+- [x] Run the full `node --test` suite.
 
 ### Acceptance criteria
 - All spec game rules are encoded in tests that pass.
@@ -283,7 +283,52 @@ the spec end to end.
     spaced grid, which is the same data in a form the code can index directly.
     Mine placement is asserted against the spec's coordinates, so the two
     representations are held equal by test.
-- Phase 02: not started.
+- Phase 02: complete (2026-09-01). Built red/green.
+  - Files changed: `board.js` (reveal / mark / cascade / reset / status added),
+    `test/board.test.js` (20 new tests appended).
+  - Red: the 20 new tests were appended and run first; every one failed with
+    `TypeError: game.reveal is not a function` / `game.toggleMark is not a
+    function`, because `createGame()` still returned only `snapshot`.
+  - Green: `node --test` reports `pass 27 / fail 0` and exits `0` (7 Phase 01
+    tests plus the 20 new ones).
+  - Public surface now: `createGame()` returns `snapshot()`, `reveal(row,
+    column)`, `toggleMark(row, column)`, and `reset()`. Each mutator returns a
+    fresh snapshot, so `ui.js` can re-render straight from the return value.
+  - Snapshot additions: `status` (`'in-progress'` / `'won'` / `'lost'`) and
+    `losingCell` (`{ row, column }` when lost, otherwise `null`). The status
+    strings are also exported as `Gridsweep.IN_PROGRESS` / `.WON` / `.LOST` so
+    `ui.js` does not have to hard-code them. Per-cell fields are unchanged:
+    `mine`, `adjacent`, `revealed`, `marked`.
+  - Cascade is an explicit flood fill that clears `marked` before setting
+    `revealed` on every cell it visits, so the spec's non-standard
+    unmark-and-continue rule is enforced in code rather than assumed. Both
+    fixture regions are asserted as exact revealed-coordinate lists (12 cells
+    from (0,0), 6 from (6,7)), and a third test asserts the region is identical
+    whether the cascade starts at (0,0) or (0,3).
+  - The cascade-through-marks test marks both an interior zero cell (0,2) and a
+    border cell (1,3) of the region, then asserts the full 12-cell region is
+    revealed and zero marks remain.
+  - `allSafeCellsRevealed()` reads only `revealed` and `mine`, never `marked`.
+    A test asserts that marking all ten mines does not by itself win.
+  - Verified after the change that `board.js` still loads as a classic script:
+    executed in a `vm` context with `module`, `require`, and `exports` all
+    `undefined`, it still assigns the `Gridsweep` global, cascades 12 cells
+    from (0,0), and reports `lost` with `losingCell {row:4,column:1}`. The
+    Phase 01 source-scanning test (no `document` / `window` / `navigator`, no
+    `import` / `export`) still passes over the enlarged file.
+  - Deviation from the plan text, and worth your attention: the plan asked for
+    a win test "with all ten marks placed on safe cells". That state cannot
+    exist at win time, because winning requires all 54 safe cells revealed and
+    a cell can never be both revealed and marked (direct reveal is blocked on
+    marks, and cascade clears them). The rule the spec actually means -- the
+    win check never consults marks -- is covered by three tests instead: a win
+    with zero marks, a win with all ten marks sitting on mines, and a win in a
+    game that began with ten marks wrongly placed on safe cells inside the
+    cascade region, which the cascade clears on its way through.
+  - Small addition beyond the plan's task list: `reveal` and `toggleMark` guard
+    against out-of-bounds coordinates and return an unchanged snapshot, with a
+    test. This keeps Phase 04's arrow-key edge handling from being the only
+    thing standing between the UI and an exception.
 - Phase 03: not started.
 - Phase 04: not started.
 - Phase 05: not started.
@@ -299,14 +344,22 @@ the spec end to end.
 
 ## User gate
 
-- Phase 01 is implemented and awaiting your review. Review `board.js`,
-  `test/board.test.js`, and the throwaway `index.html` stub, and run
-  `node --test` yourself to watch the suite pass.
-- Worth deciding: whether the snapshot exposing `mine` on hidden cells is
-  acceptable. The fixed layout ships in source anyway so nothing is concealed
-  by hiding it, but if you would rather the snapshot omit `mine` until a cell
-  is revealed or the game ends, say so before Phase 02 builds on it.
-- This is a good point for a checkpoint commit before Phase 02.
+- Phase 02 is implemented and awaiting your review. Review `board.js` and the
+  20 new tests at the bottom of `test/board.test.js`, and run `node --test`
+  yourself to watch all 27 pass.
+- Worth deciding before Phase 03 builds a renderer on this shape:
+  - The plan's "win with all ten marks placed on safe cells" test is
+    unsatisfiable as literally written; see the Phase 02 deviation note above
+    for what was tested instead. If you read the spec's "or with all ten placed
+    wrongly" differently -- for example that a marked cell should be revealable
+    by a direct reveal once the game is otherwise won -- say so now.
+  - `snapshot()` still exposes `mine` on hidden cells. This was raised at the
+    Phase 01 gate and left as-is. Phase 05 needs mine positions to reveal all
+    mines at game end, so the simplest path keeps it; if you would rather the
+    snapshot withhold `mine` until a cell is revealed or the game ends, Phase
+    03 is the last cheap moment to change it.
+- This is a good point for a checkpoint commit before Phase 03 starts on the
+  UI.
 - Next stage if approved:
   `Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-gridsweep-plan.md`
 - If you want AI-assisted formal review of this phase first:
