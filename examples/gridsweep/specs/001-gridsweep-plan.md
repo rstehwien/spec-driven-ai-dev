@@ -217,15 +217,15 @@ Goal: present win and loss correctly and verify every acceptance criterion in
 the spec end to end.
 
 ### Tasks
-- [ ] On a loss, highlight the triggering mine distinctly, reveal all other
+- [x] On a loss, highlight the triggering mine distinctly, reveal all other
       mines, and mark marks left on safe cells as incorrect.
-- [ ] On a win, lock the board and show all remaining mines.
-- [ ] Display "You lose" and "You win" status messages in the status area.
-- [ ] Confirm all input is inert after the game ends until "New game" is
+- [x] On a win, lock the board and show all remaining mines.
+- [x] Display "You lose" and "You win" status messages in the status area.
+- [x] Confirm all input is inert after the game ends until "New game" is
       pressed.
-- [ ] Walk the spec's Acceptance Criteria list one item at a time and record
+- [x] Walk the spec's Acceptance Criteria list one item at a time and record
       the result of each in the Implementation evidence section below.
-- [ ] Run the full `node --test` suite and record the output.
+- [x] Run the full `node --test` suite and record the output.
 
 ### Acceptance criteria
 - Every acceptance criterion in `specs/001-gridsweep-spec.md` is verified and
@@ -512,7 +512,135 @@ the spec end to end.
     This narrows the binding surface rather than widening it.
   - The status line stays empty, per this phase's Out of scope. Win and loss
     messages are Phase 05.
-- Phase 05: not started.
+- Phase 05: complete (2026-09-01). Built red/green.
+  - Files changed: `ui.js` (end-state rendering), `styles.css` (end-state
+    rules), `test/board.test.js` (5 tests appended). `board.js` and
+    `index.html` were not touched: everything this phase needed -- `status`,
+    `losingCell`, `mine` on every cell, and the status element -- already
+    existed from Phases 02 and 03.
+  - Red: the 5 new tests were written and run first. Four failed against the
+    Phase 04 files (no `END_MESSAGES` table, no `Gridsweep.WON` / `.LOST`
+    reference, no `losingCell` read, no `.cell.exploded` rule in the
+    stylesheet). The fifth is declared in its own comment as a regression
+    guard rather than a red test: it pins the snapshot contract the renderer
+    newly leans on, so it passed from the start.
+  - Green: `node --test` reports `tests 42 / pass 42 / fail 0` and exits `0`
+    (37 prior tests plus the 5 new ones).
+  - The renderer was restructured rather than extended. `cellKind` now decides
+    once what a cell is -- one of `hidden`, `marked`, `empty`, `count`, `mine`,
+    `exploded`, `wrong-mark` -- and the glyph, the class list, and the
+    `aria-label` are three lookups off that one kind. Before this phase each of
+    the three walked the cell's fields itself, which is exactly the shape that
+    lets a screen reader and the screen disagree once a fourth end-state case
+    is added.
+  - The end-state rule lives in one line of `cellKind`: a mine is drawn as a
+    mine when the game has ended *or* it was revealed, and a mark is drawn as
+    wrong once the game has ended. Nothing else in `ui.js` branches on the
+    ending.
+  - Marks on mines are not spared at the end. The spec asks for every mine
+    drawn as a mine on both endings, so a correct mark is replaced by the mine
+    it was covering rather than kept as a flag. That is a readable-either-way
+    sentence in the spec; the literal reading was taken, and the win
+    screenshot below shows what it looks like.
+  - `styles.css` gained `.cell.exploded` (a hot red face, white glyph),
+    `.cell.wrong-mark` (pale red face, red cross), and `.board.ended
+    .cell.hidden { cursor: default }`. A test asserts `.cell.exploded` sits
+    after `.cell.mine` in the file, because the two have equal specificity and
+    land on the same element, so source order is the whole of the cascade
+    here.
+  - A wrong mark is separated from a mine three ways, not one: it keeps the
+    raised unopened border (mines are flat and revealed), its face is paler,
+    and its glyph is a red cross rather than a black mine. Colour alone is
+    never the signal.
+
+  ### Browser verification and the acceptance-criteria sweep
+
+  - Driven in headless Chrome against the real
+    `file:///Users/res/gridsweep-demo/index.html` with real trusted input
+    through the DevTools protocol (`Input.dispatchKeyEvent` /
+    `Input.dispatchMouseEvent`). The driver is Node built-ins only, lives in
+    the scratchpad, and is not part of the deliverable; the repo gained no
+    throwaway files this phase. 45 checks, all passing, run three times. Every
+    assertion reads the DOM only -- never the game object -- so it is about
+    what a player can actually see.
+  - The whole board was won by keyboard alone: Tab in from the body, arrows to
+    every cell in boustrophedon order, `F` on two mines along the way, `Enter`
+    on all 54 safe cells. No console fast path was used, so the win path and
+    the keyboard-only claim were proved by the same run.
+  - Spec Acceptance Criteria, walked one at a time:
+    1. *Revealing a mine ends the game as a loss.* Verified. `Enter` on (2,1)
+       set the status line to `You lose` and locked the board.
+    2. *Revealing the last of the 54 safe cells wins, regardless of marks.*
+       Verified. The keyboard playthrough above ended on `You win` with two
+       marks still standing on mines and the counter reading `8`.
+    3. *Every revealed safe cell with adjacent mines shows its count; a
+       zero-count cell is blank.* Verified. (0,0) rendered empty with label
+       `Row 1, column 1, empty`; (0,5) rendered `1` as `count-1`; (1,5)
+       rendered `2` as `count-2`. The win screenshot shows the complete digit
+       grid, which matches the adjacency fixture at the top of this plan.
+    4. *A zero-count reveal cascades, unmarking and revealing marked cells it
+       reaches.* Verified. With (0,2) marked, `Enter` on (0,4) revealed 12
+       cells, left (0,2) as `cell revealed`, and returned the counter to `10`.
+    5. *A direct reveal of a marked cell has no effect until the mark is
+       removed.* Verified. On the marked (0,2), both `Enter` and `Space` left
+       it `cell hidden marked`.
+    6. *Once the game has ended, further input has no effect until "New game"
+       is pressed.* Verified on both endings. After the loss, `Enter`, `Space`,
+       `f`, `r`, `Escape`, a left click and a right click left every cell's
+       class, text and label identical, the status line still `You lose`, and
+       the counter still `9`. Same after the win. One documented exception
+       below.
+    7. *The game is fully playable using only the keyboard.* Verified. Entry,
+       movement, marking, revealing, the full win, and "New game" (reached by
+       Tab, activated with `Space`) were all keyboard-only.
+    8. *The board logic has automated coverage runnable with `node --test`, and
+       the suite passes.* Verified: `tests 42 / pass 42 / fail 0`, exit `0`.
+  - Loss presentation, checked against the spec sentence by sentence: the mine
+    that was hit rendered `cell revealed mine exploded` with label `Row 3,
+    column 2, mine, the one that ended the game`, painted `rgb(208, 32, 32)`
+    against `rgb(232, 180, 180)` for the nine others; all ten mines showed the
+    mine glyph; exactly one cell carried `exploded`; the mark left on the safe
+    cell (3,0) rendered `cell hidden marked wrong-mark` showing a cross, with
+    label `Row 4, column 1, incorrect mark`; and untouched safe cells stayed
+    plain `cell hidden` -- a loss opens the mines, not the board.
+  - Win presentation: all ten mines rendered `cell revealed mine`, including
+    the two the player had marked; no cell carried `exploded`; every safe cell
+    was revealed; the board carried `board ended`.
+  - "New game" after the loss cleared the status line, dropped `ended`, returned
+    all 64 cells to `cell hidden`, reset the counter to `10`, and sent the tab
+    order home to (0,0). The board was then played to a win, so the reset is
+    not merely cosmetic.
+  - The console stayed clean across the whole run: no console message, no page
+    error, no failed subresource. Chrome's own stderr carries the usual macOS
+    headless `CVDisplayLinkCreateWithCGDisplay` noise, which is the browser's
+    display layer, not the page.
+  - Two screenshots were taken at the two end states and read back to confirm
+    the board looks the way the assertions claim. They live in the scratchpad,
+    not the repo.
+
+  ### Judgement calls
+
+  - The Phase 04 call that navigation stays live after the game ends now
+    extends to pointer input: a click on a finished board moves the cursor,
+    because `ui.js` calls `setCursor` after every pointer action and the
+    board's own `reveal` is the thing that has gone inert. This is measured
+    rather than assumed -- the inertness checks above compare each cell's
+    class, text and label and deliberately exclude the roving `tabindex`, and
+    a separate check records the cursor moving to the clicked cell. If you read
+    the spec's "further input has no effect" as covering cursor movement, this
+    is still the two-line change it was at the Phase 04 gate, and it is now
+    the only open reading of that criterion.
+  - `aria-disabled="true"` on the finished grid was considered and left out.
+    The spec's accessibility list is explicit and does not include it, the
+    status line already announces the ending, and the cell labels already
+    change to name every mine. The visual lock is the `.board.ended` class
+    only.
+  - The remaining-mines counter is left alone at the end rather than zeroed or
+    hidden. It is defined in the spec as ten minus marks placed, and that stays
+    true and readable on a finished board.
+  - `END_MESSAGES` is keyed by the status constants from `board.js`, and a test
+    asserts `ui.js` contains no `'won'` / `'lost'` / `'in-progress'` literal, so
+    the renderer cannot drift from the board's own vocabulary.
 
 ## Handoff notes
 
@@ -525,35 +653,29 @@ the spec end to end.
 
 ## User gate
 
-- Phase 04 is implemented and awaiting your review. The game is now fully
-  playable. Review the input section at the bottom of `ui.js` and the 5 tests
-  at the end of `test/board.test.js`, run `node --test` yourself to watch all
-  37 pass, and open `index.html` from Finder and play a round.
-- Try in particular: arrow to a cell and press `F`, then `Enter` on it (nothing
-  should happen); `F` again to unmark, then `Enter`; arrow into a corner and
-  keep pressing (the cursor should stop, not wrap); right-click to mark;
-  right-click off the board (your normal context menu should still appear);
-  press `r` or `Escape` (nothing should happen -- there is deliberately no
-  restart key); then press the "New game" button.
-- What you cannot see yet, by design: hitting a mine ends the game and further
-  input goes inert, but the board does not open up and no "You lose" message
-  appears. End-state presentation is Phase 05.
-- Three items carried forward that you have not ruled on. None blocked this
-  phase; all are still yours to overturn:
-  - `snapshot()` still exposes `mine` on hidden cells, with `ui.js` holding the
-    line so nothing leaks into the DOM. Phase 05 is the phase that starts
-    reading `mine` to open the board at game end, so this is the last cheap
-    moment to change it if you want the snapshot itself to withhold it.
-  - The status line is `role="status"`, a live region, so a screen reader user
-    is told they won. Phase 05 is where it finally has something to say, so if
-    you read the spec's "no live-region announcements" sentence as forbidding
-    even this one, now is the time.
-  - The Phase 02 reading of "win with all ten marks placed wrongly" stands.
-- New this phase, and the one I would most like a second opinion on: arrow keys
-  still move the cursor after the game ends, while reveal and mark go inert.
-  The reasoning is in the Phase 04 evidence above.
-- This is a good point for a checkpoint commit before Phase 05.
-- Next stage if approved:
-  `Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-gridsweep-plan.md`
-- If you want AI-assisted formal review of this phase first:
+- Phase 05 is implemented and the plan is complete. All five phases are done,
+  `node --test` passes 42/42, and every acceptance criterion in the spec has
+  been walked and recorded in the evidence above.
+- Review the end-state block in `ui.js` (`cellKind` and the three lookup
+  tables), the three new rules at the bottom of `styles.css`, and the five
+  tests at the end of `test/board.test.js`. Run `node --test` yourself, then
+  open `index.html` from Finder.
+- Try in particular: mark a safe cell, then walk into a mine -- the board
+  should open, the mine you hit should be the red one, your wrong mark should
+  become a red cross, and safe cells you never touched should stay closed.
+  Then press "New game" and confirm the board comes back clean.
+- Two readings of the spec are still yours to overturn, and both are cheap to
+  change now:
+  - navigation stays live after the game ends, for the keyboard and now for
+    the mouse too, so a player can read the finished board. Reveal and mark are
+    inert as required.
+  - a correctly marked mine is redrawn as a mine at the end rather than kept as
+    a flag, following the spec's "all remaining mines are shown as mines"
+    literally.
+- Also still unruled from earlier gates: `snapshot()` exposes `mine` on hidden
+  cells with `ui.js` holding the line, and the status line is `role="status"`.
+- This is a good point for a checkpoint commit.
+- If you want AI-assisted formal review of this phase:
   `Use the human-gated-spec-driven-ai-development skill to review-phase for 001-gridsweep-plan.md`
+- Or, since this was the last phase:
+  `Use the human-gated-spec-driven-ai-development skill to final-review for 001-gridsweep-plan.md`

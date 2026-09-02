@@ -9,6 +9,13 @@
 (function () {
   var MARK_GLYPH = '⚑'; // black flag
   var MINE_GLYPH = '✹'; // twelve-pointed star, stands in for the mine
+  var WRONG_GLYPH = '✗'; // a mark the finished board proved wrong
+
+  // The only two things the status line ever says, and the only place this
+  // file names a game status at all. Everything else asks board.js.
+  var END_MESSAGES = {};
+  END_MESSAGES[Gridsweep.WON] = 'You win';
+  END_MESSAGES[Gridsweep.LOST] = 'You lose';
 
   // The complete key binding surface. Nothing else in this file compares a key
   // to a literal, so these three tables are the whole answer to "what does the
@@ -65,44 +72,89 @@
     }
   }
 
-  function cellLabel(cell, row, column) {
+  // How one cell should be drawn, as one of seven kinds. While the game runs a
+  // cell is drawn from its own state alone. Once it ends the board opens up:
+  // every mine shows whether or not the player found it, the mine that ended
+  // the game is singled out from the ones merely uncovered alongside it, and a
+  // mark still sitting on a safe cell is shown as the mistake it turned out to
+  // be. Marks on mines are not spared: the spec asks for every mine drawn as a
+  // mine at the end.
+  function cellKind(cell, row, column, snapshot) {
+    var ended = snapshot.status !== Gridsweep.IN_PROGRESS;
+
+    if (cell.mine && (ended || cell.revealed)) {
+      return isLosingCell(snapshot, row, column) ? 'exploded' : 'mine';
+    }
+    // A mark hides whatever is under it for as long as the game is live, which
+    // is what keeps a hidden mine out of the DOM.
+    if (cell.marked) return ended ? 'wrong-mark' : 'marked';
+    if (!cell.revealed) return 'hidden';
+    return cell.adjacent === 0 ? 'empty' : 'count';
+  }
+
+  function isLosingCell(snapshot, row, column) {
+    return (
+      snapshot.losingCell !== null &&
+      snapshot.losingCell.row === row &&
+      snapshot.losingCell.column === column
+    );
+  }
+
+  // Everything below is a lookup from that one kind, so the decision about what
+  // a cell is happens once and the glyph, the classes, and the screen-reader
+  // label can never disagree about it. `count` is the one kind that needs the
+  // cell itself, since it carries a digit.
+
+  var FACES = {
+    hidden: '',
+    marked: MARK_GLYPH,
+    empty: '',
+    mine: MINE_GLYPH,
+    exploded: MINE_GLYPH,
+    'wrong-mark': WRONG_GLYPH,
+  };
+
+  var CLASSES = {
+    hidden: 'hidden',
+    marked: 'hidden marked',
+    empty: 'revealed',
+    mine: 'revealed mine',
+    exploded: 'revealed mine exploded',
+    'wrong-mark': 'hidden marked wrong-mark',
+  };
+
+  var LABELS = {
+    hidden: 'hidden',
+    marked: 'marked',
+    empty: 'empty',
+    mine: 'mine',
+    exploded: 'mine, the one that ended the game',
+    'wrong-mark': 'incorrect mark',
+  };
+
+  // A hidden cell must never leak whether it holds a mine. The snapshot carries
+  // `mine` on every cell, because the end-state render needs it, so this
+  // renderer is the boundary that keeps it out of the DOM until the game ends.
+  function cellFace(kind, cell) {
+    return kind === 'count' ? String(cell.adjacent) : FACES[kind];
+  }
+
+  function cellClassName(kind, cell) {
+    return (
+      'cell ' +
+      (kind === 'count' ? 'revealed count-' + cell.adjacent : CLASSES[kind])
+    );
+  }
+
+  function cellLabel(kind, cell, row, column) {
     var where = 'Row ' + (row + 1) + ', column ' + (column + 1) + ', ';
 
-    if (cell.marked) return where + 'marked';
-    if (!cell.revealed) return where + 'hidden';
-    if (cell.mine) return where + 'mine';
-    if (cell.adjacent === 0) return where + 'empty';
+    if (kind !== 'count') return where + LABELS[kind];
     return (
       where +
       cell.adjacent +
       (cell.adjacent === 1 ? ' adjacent mine' : ' adjacent mines')
     );
-  }
-
-  // A hidden cell must never leak whether it holds a mine. The snapshot still
-  // carries `mine` on every cell -- Phase 05 needs it to open the board at game
-  // end -- so the renderer is the boundary that keeps it out of the DOM.
-  function cellFace(cell) {
-    if (cell.marked) return MARK_GLYPH;
-    if (!cell.revealed) return '';
-    if (cell.mine) return MINE_GLYPH;
-    if (cell.adjacent === 0) return '';
-    return String(cell.adjacent);
-  }
-
-  function cellClassName(cell) {
-    var names = ['cell'];
-
-    if (cell.revealed) {
-      names.push('revealed');
-      if (cell.mine) names.push('mine');
-      else if (cell.adjacent > 0) names.push('count-' + cell.adjacent);
-    } else {
-      names.push('hidden');
-      if (cell.marked) names.push('marked');
-    }
-
-    return names.join(' ');
   }
 
   function countMarks(snapshot) {
@@ -116,14 +168,17 @@
   }
 
   function render(snapshot) {
+    var ended = snapshot.status !== Gridsweep.IN_PROGRESS;
+
     for (var row = 0; row < snapshot.rows; row += 1) {
       for (var column = 0; column < snapshot.columns; column += 1) {
         var cell = snapshot.cells[row][column];
         var element = cellElements[row][column];
+        var kind = cellKind(cell, row, column, snapshot);
 
-        element.className = cellClassName(cell);
-        element.textContent = cellFace(cell);
-        element.setAttribute('aria-label', cellLabel(cell, row, column));
+        element.className = cellClassName(kind, cell);
+        element.textContent = cellFace(kind, cell);
+        element.setAttribute('aria-label', cellLabel(kind, cell, row, column));
         element.setAttribute(
           'tabindex',
           row === cursor.row && column === cursor.column ? '0' : '-1',
@@ -135,9 +190,14 @@
       snapshot.mineCount - countMarks(snapshot),
     );
 
-    // Win and loss messages are Phase 05. While a game is in progress the
-    // status line stays empty rather than narrating every move.
-    statusElement.textContent = '';
+    // board.js is what actually locks the board -- reveal and mark go inert the
+    // moment the game ends. This only stops the page offering what it will no
+    // longer do.
+    boardElement.className = ended ? 'board ended' : 'board';
+
+    // The status line stays empty while the game runs rather than narrating
+    // every move. It has exactly two things to say, and only at the end.
+    statusElement.textContent = ended ? END_MESSAGES[snapshot.status] : '';
 
     return snapshot;
   }
@@ -244,7 +304,7 @@
 
   // A small handle for driving the page from the console during manual
   // verification, and the fast path the plan asks for when checking a win
-  // without clicking 54 cells by hand. Input wiring is Phase 04.
+  // without clicking 54 cells by hand.
   globalThis.GridsweepUI = {
     game: game,
     refresh: refresh,

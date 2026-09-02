@@ -135,3 +135,28 @@ h1 {
   outline: 3px solid var(--focus);
   outline-offset: -3px;
 }
+
+/* End of game.
+   .cell.exploded and .cell.wrong-mark carry the same specificity as the rules
+   they override (.cell.mine, .cell.hidden / .cell.marked), so they must stay
+   below them in the file: source order is what decides the cascade here. */
+
+/* The mine the player actually hit, as against the mines merely opened
+   alongside it: a hot face rather than the pale one. */
+.cell.exploded {
+  background: #d02020;
+  color: #ffffff;
+}
+
+/* A mark still sitting on a safe cell when the board opened. The glyph changes
+   from a flag to a cross, so this does not rely on colour alone. */
+.cell.wrong-mark {
+  background: #e6cfcf;
+  color: #a00000;
+}
+
+/* Nothing on a finished board responds any more, so it stops offering to. The
+   cursor still moves and every cell still reads to a screen reader. */
+.board.ended .cell.hidden {
+  cursor: default;
+}

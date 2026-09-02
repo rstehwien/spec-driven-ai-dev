@@ -566,3 +566,155 @@ test('the New game button is the only way to reset the game', () => {
     'the reset call must not sit in a listener wired after the button',
   );
 });
+
+// ---------------------------------------------------------------------------
+// Phase 05: end-state presentation.
+//
+// The same constraint as Phases 03 and 04 applies: ui.js is DOM code the suite
+// may never load, so how the end state looks is verified in a browser and
+// recorded in the plan. What the suite can hold are the decisions that are
+// cheap to break and expensive to spot by eye -- each end message existing
+// exactly once, the renderer asking board.js what the status is rather than
+// naming it, the mine that ended the game being drawn differently from the
+// mines merely uncovered alongside it, and a wrong mark being drawn at all.
+// ---------------------------------------------------------------------------
+
+const mineCoordinates = (snapshot) => {
+  const out = [];
+  for (let row = 0; row < 8; row += 1) {
+    for (let column = 0; column < 8; column += 1) {
+      if (snapshot.cells[row][column].mine) out.push([row, column]);
+    }
+  }
+  return out;
+};
+
+test('the snapshot at game end carries everything needed to open the board', () => {
+  // A regression guard rather than a red test: it pins the part of the
+  // snapshot contract that the end-state renderer newly depends on, so a later
+  // change to board.js cannot quietly take it away.
+  const lost = Gridsweep.createGame();
+  lost.toggleMark(0, 0); // a mark on a safe cell, so it is wrong at the end
+  const afterLoss = lost.reveal(7, 0);
+
+  assert.equal(afterLoss.status, Gridsweep.LOST);
+  assert.deepEqual(afterLoss.losingCell, { row: 7, column: 0 });
+  assert.deepEqual(mineCoordinates(afterLoss), MINES);
+  assert.equal(afterLoss.cells[0][0].marked, true);
+  assert.equal(
+    revealedCoordinates(afterLoss).length,
+    1,
+    'only the mine that was hit is revealed; the renderer opens the rest',
+  );
+
+  const won = Gridsweep.createGame();
+  const afterWin = revealAllSafeCells(won);
+
+  assert.equal(afterWin.status, Gridsweep.WON);
+  assert.equal(afterWin.losingCell, null);
+  assert.deepEqual(mineCoordinates(afterWin), MINES);
+  for (const [row, column] of MINES) {
+    assert.equal(
+      afterWin.cells[row][column].revealed,
+      false,
+      'a win reveals no mine; the renderer shows them',
+    );
+  }
+});
+
+test('ui.js shows one end message per ending, and says each exactly once', () => {
+  const source = readProjectFile('ui.js');
+
+  assert.ok(
+    /END_MESSAGES\[Gridsweep\.WON\]\s*=\s*'You win'/.test(source),
+    'a win must show the winning message',
+  );
+  assert.ok(
+    /END_MESSAGES\[Gridsweep\.LOST\]\s*=\s*'You lose'/.test(source),
+    'a loss must show the losing message',
+  );
+
+  for (const message of ['You win', 'You lose']) {
+    assert.equal(
+      (source.match(new RegExp(message, 'g')) || []).length,
+      1,
+      `"${message}" must appear once, in the message table and nowhere else`,
+    );
+  }
+
+  // One assignment site means the status line cannot be left saying something
+  // stale by a code path that forgot to clear it.
+  assert.equal(
+    (source.match(/statusElement\.textContent\s*=/g) || []).length,
+    1,
+    'the status line must have exactly one assignment site',
+  );
+});
+
+test('ui.js asks board.js for the game status instead of naming it', () => {
+  const source = readProjectFile('ui.js');
+
+  assert.ok(
+    !/'(?:won|lost|in-progress)'/.test(source),
+    'ui.js must use Gridsweep.WON / .LOST / .IN_PROGRESS, not status literals',
+  );
+  assert.ok(
+    /\bGridsweep\.(?:IN_PROGRESS|WON|LOST)\b/.test(source),
+    'ui.js must read the status constants off Gridsweep',
+  );
+});
+
+test('ui.js singles out the triggering mine and shows a mark left on a safe cell', () => {
+  const source = readProjectFile('ui.js');
+
+  assert.ok(
+    /snapshot\.losingCell/.test(source),
+    'ui.js must read losingCell to find the mine that ended the game',
+  );
+  assert.ok(
+    /\bexploded\b/.test(source),
+    'ui.js must give the triggering mine its own class',
+  );
+  assert.ok(
+    /wrong-mark/.test(source),
+    'ui.js must draw a mark left on a safe cell as incorrect',
+  );
+  assert.ok(
+    /\bended\b/.test(source),
+    'ui.js must mark the board itself as locked once the game ends',
+  );
+});
+
+// Pulls one declaration out of one rule, so the test reads the stylesheet
+// rather than trusting a class name to mean something.
+const declaration = (css, selector, property) => {
+  const rule = new RegExp(
+    `${selector.replace(/\./g, '\\.')}\\s*\\{([^}]*)\\}`,
+  ).exec(css);
+  assert.ok(rule, `styles.css must declare a ${selector} rule`);
+  const match = new RegExp(`\\b${property}\\s*:\\s*([^;]+);`).exec(rule[1]);
+  assert.ok(match, `${selector} must set ${property}`);
+  return match[1].trim();
+};
+
+test('styles.css draws the triggering mine and a wrong mark distinctly', () => {
+  const css = readProjectFile('styles.css');
+
+  assert.notEqual(
+    declaration(css, '.cell.exploded', 'background'),
+    declaration(css, '.cell.mine', 'background'),
+    'the mine that ended the game must not look like the ones opened with it',
+  );
+  assert.notEqual(
+    declaration(css, '.cell.wrong-mark', 'background'),
+    declaration(css, '.cell.hidden', 'background'),
+    'a mark the board proved wrong must not look like an untouched cell',
+  );
+
+  // .cell.exploded and .cell.mine have the same specificity, so the cascade is
+  // decided by source order alone. Both classes are on the same element.
+  assert.ok(
+    css.indexOf('.cell.exploded') > css.indexOf('.cell.mine'),
+    '.cell.exploded must come after .cell.mine to win the cascade',
+  );
+});
