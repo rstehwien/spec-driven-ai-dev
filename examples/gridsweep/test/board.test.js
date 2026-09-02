@@ -458,3 +458,111 @@ test('index.html links the stylesheet and provides the elements ui.js renders in
     );
   }
 });
+
+// ---------------------------------------------------------------------------
+// Phase 04: input, new game, and status wiring.
+//
+// Behaviour still has to be driven in a browser, since ui.js is DOM code the
+// suite may never load. What the suite can hold are the rules that are easy to
+// break by accident and expensive to catch by eye: the binding table being the
+// only place a key is bound (so no restart key can creep in), the context menu
+// being suppressed over the board rather than the whole page, and reset having
+// exactly one entry point.
+// ---------------------------------------------------------------------------
+
+// Pulls the quoted key names out of one named binding table in ui.js, so the
+// test reads the actual bindings rather than trusting a comment about them.
+const bindingTable = (source, name) => {
+  const match = new RegExp(`var ${name} = ([\\[{][\\s\\S]*?[\\]}]);`).exec(
+    source,
+  );
+  assert.ok(match, `ui.js must declare a ${name} binding table`);
+  return (match[1].match(/'([^']*)'|(\bArrow\w+\b)|(\bEnter\b)/g) || []).map(
+    (token) => token.replace(/'/g, ''),
+  );
+};
+
+test('ui.js moves the cursor with the four arrow keys and nothing else', () => {
+  const source = readProjectFile('ui.js');
+
+  assert.deepEqual(bindingTable(source, 'CURSOR_STEPS').sort(), [
+    'ArrowDown',
+    'ArrowLeft',
+    'ArrowRight',
+    'ArrowUp',
+  ]);
+});
+
+test('ui.js reveals on Enter and Space and marks on F, and binds no other key', () => {
+  const source = readProjectFile('ui.js');
+
+  assert.deepEqual(bindingTable(source, 'REVEAL_KEYS').sort(), [' ', 'Enter']);
+  assert.deepEqual(bindingTable(source, 'MARK_KEYS').sort(), ['F', 'f']);
+
+  // The tables above are the whole binding surface only if no handler compares
+  // event.key to a literal of its own. This is the guard that keeps a restart
+  // key -- which the spec forbids outright -- from ever being added quietly.
+  assert.ok(
+    !/\bkey\s*===\s*['"]/.test(source),
+    'ui.js must bind keys through the tables, not by comparing event.key',
+  );
+});
+
+test('ui.js suppresses the context menu over the board only', () => {
+  const source = readProjectFile('ui.js');
+
+  assert.ok(
+    /boardElement\.addEventListener\(\s*'contextmenu'/.test(source),
+    'ui.js must suppress the context menu on the board element',
+  );
+  assert.ok(
+    !/(?:document|window)\.addEventListener\(\s*'contextmenu'/.test(source),
+    'context-menu suppression must not reach the whole page',
+  );
+});
+
+test('ui.js reads the board only through the public surface', () => {
+  const source = readProjectFile('ui.js');
+
+  // ui.js may not reimplement a rule. Everything it changes must go through
+  // reveal / toggleMark / reset, and everything it draws comes from snapshot.
+  const calls = (source.match(/\bgame\.(\w+)\(/g) || []).map((call) =>
+    call.slice('game.'.length, -1),
+  );
+  assert.deepEqual(
+    [...new Set(calls)].sort(),
+    ['reset', 'reveal', 'snapshot', 'toggleMark'],
+  );
+});
+
+test('the New game button is the only way to reset the game', () => {
+  const source = readProjectFile('ui.js');
+
+  assert.equal(
+    (source.match(/\bgame\.reset\(/g) || []).length,
+    1,
+    'reset must have exactly one call site',
+  );
+  assert.ok(
+    /newGameElement\.addEventListener\(\s*'click'/.test(source),
+    'the New game button must be wired to a click handler',
+  );
+  // The single reset call site has to be the button's, not a key handler's:
+  // it must fall after the New game listener and before any listener wired
+  // after it, which pins it inside that handler's body.
+  const wiring = "newGameElement.addEventListener('click'";
+  const buttonAt = source.indexOf(wiring);
+  const resetAt = source.indexOf('game.reset(');
+  assert.ok(
+    resetAt > buttonAt,
+    'the reset call must live inside the New game click handler',
+  );
+  const nextListenerAt = source.indexOf(
+    'addEventListener(',
+    buttonAt + wiring.length,
+  );
+  assert.ok(
+    nextListenerAt === -1 || resetAt < nextListenerAt,
+    'the reset call must not sit in a listener wired after the button',
+  );
+});

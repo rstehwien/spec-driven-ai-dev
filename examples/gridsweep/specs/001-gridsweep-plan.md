@@ -178,17 +178,17 @@ Goal: make the game fully playable, keyboard-first, with pointer support and a
 working "New game" button.
 
 ### Tasks
-- [ ] Wire arrow keys to move the cursor one cell without wrapping at edges.
-- [ ] Wire `Enter` and `Space` to reveal the focused cell, and `F` to toggle a
+- [x] Wire arrow keys to move the cursor one cell without wrapping at edges.
+- [x] Wire `Enter` and `Space` to reveal the focused cell, and `F` to toggle a
       mark; bind no other keys, and in particular no restart key.
-- [ ] Wire left click to reveal and right click to toggle a mark, suppressing
+- [x] Wire left click to reveal and right click to toggle a mark, suppressing
       the context menu over the board only.
-- [ ] Update the remaining-mines counter as ten minus marks placed.
-- [ ] Wire the "New game" button to reset state and clear the end state,
+- [x] Update the remaining-mines counter as ten minus marks placed.
+- [x] Wire the "New game" button to reset state and clear the end state,
       replaying the same fixed layout.
-- [ ] Play through by keyboard alone and confirm reveal, cascade, marking,
+- [x] Play through by keyboard alone and confirm reveal, cascade, marking,
       mark-blocks-reveal, and reset all behave per the spec.
-- [ ] Run `node --test`.
+- [x] Run `node --test`.
 
 ### Acceptance criteria
 - The game is completable using only the keyboard.
@@ -203,7 +203,9 @@ working "New game" button.
 
 ### Risks / blockers
 - Arrow keys must not scroll the page; `preventDefault` needs to be scoped to
-  the board's own handlers.
+  the board's own handlers. Retired: the handler is bound to `#board` and calls
+  `preventDefault` only after it has decided the key is one it binds, verified
+  in the browser (see evidence).
 
 ### Notes
 - Input handlers call only the Phase 02 public surface and re-render from the
@@ -407,7 +409,109 @@ the spec end to end.
     the probe above possible with no input wired, and it is the documented
     console fast path the Phase 05 note asks for so a win can be checked
     without clicking 54 cells.
-- Phase 04: not started.
+- Phase 04: complete (2026-09-01). Built red/green.
+  - Files changed: `ui.js` (input wiring added), `test/board.test.js` (5 tests
+    appended). `board.js`, `index.html` and `styles.css` were not touched --
+    this phase is wiring only, and the button, counter and status element
+    already existed from Phase 03.
+  - Red: the 5 new tests were written and run first; all 5 failed against the
+    Phase 03 `ui.js`, which had no binding tables, no listeners and no
+    `newGameElement`.
+  - Green: `node --test` reports `pass 37 / fail 0` and exits `0` (32 prior
+    tests plus the 5 new ones).
+  - Two of the five red tests failed for a reason in the *test*, not the code,
+    and were corrected while still red: one assertion chained comparison
+    operators (`resetAt > keydownAt === resetAt > buttonAt`, which parses as
+    nonsense), and one searched for the next `addEventListener` from an offset
+    that landed inside the button's own call. Both now do what they claim.
+  - What the suite holds for this phase, given that it may never load `ui.js`:
+    the three binding tables are the entire keyboard surface (`CURSOR_STEPS`,
+    `REVEAL_KEYS`, `MARK_KEYS`), and no handler compares `event.key` to a
+    literal of its own -- which is what stops a restart key, forbidden by the
+    spec, from being added quietly later. Also: context-menu suppression is
+    bound to the board and not to `document` or `window`; `ui.js` touches the
+    board only through `reveal` / `toggleMark` / `reset` / `snapshot`, so no
+    game rule can be restated in the renderer; and `game.reset()` has exactly
+    one call site, inside the New game click handler.
+
+  ### Browser verification
+
+  - `ui.js` behaviour was driven in headless Chrome against the real
+    `file:///Users/res/gridsweep-demo/index.html` -- not a probe copy of the
+    page -- using real trusted input through the DevTools protocol
+    (`Input.dispatchKeyEvent` / `Input.dispatchMouseEvent`). The driver is
+    Node built-ins only (`WebSocket`, `fetch`), lives in the scratchpad, and
+    is not part of the deliverable; the repo gained no throwaway files this
+    phase. 29 checks, all passing, run twice:
+    - arrows clamp at every edge: `ArrowUp`/`ArrowLeft` at (0,0) leave the
+      cursor at (0,0); nine `ArrowDown` then nine `ArrowRight` land on (7,7)
+      and stop there; no wrap in either direction
+    - exactly one cell carries `tabindex="0"` throughout, and it is always
+      `document.activeElement`
+    - `F` marks and the counter drops to 9; `Enter` and `Space` on that marked
+      cell both do nothing; shift+`F` unmarks and the counter returns to 10
+    - a marked cell reports `Row 1, column 1, marked` to a screen reader
+    - with (0,2) marked, `Enter` on (0,4) cascades the full 12-cell region,
+      clears the mark it passed through, and returns the counter to 10
+    - a revealed zero-count cell is blank with an `empty` label; a revealed
+      count cell shows its digit with an `N adjacent mines` label
+    - left click reveals and moves the cursor to the clicked cell; right click
+      marks, right click again unmarks, and right click on an already-revealed
+      cell does nothing
+    - the context menu is suppressed over the board and left alone off it,
+      measured by a document-level listener reading `defaultPrevented`: three
+      board right-clicks recorded `true`, one right-click on the page margin
+      recorded `false`
+    - clicking a mine reveals it as `cell revealed mine` and ends the game;
+      afterwards `Enter`, `F`, `Space`, a left click and a right click all
+      leave the board byte-identical
+    - shift+Tab from the board reaches the New game button (it sits before the
+      board in the DOM), `Space` activates it, and the board comes back fully
+      hidden and unmarked with the counter at 10, the status empty, and the
+      cursor home at (0,0); the board is then playable again
+    - no console message, page error or failed subresource was captured across
+      the whole run
+  - The plan's stated risk was measured directly rather than by eye. A
+    document-level `keydown` listener recorded `defaultPrevented` for every key
+    pressed: `ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`, `Enter`,
+    `Space`, `f` and `F` all `true`; `r`, `n`, `Escape` and `Backspace` all
+    `false`. The game suppresses the default action of exactly the keys it
+    binds and swallows nothing else, so Tab and browser shortcuts still work
+    from inside the board.
+  - The window was sized 420x260 so the page genuinely scrolls, which is what
+    makes that check meaningful rather than vacuous.
+  - Driver artifact worth recording so nobody re-debugs it: a CDP
+    `keyDown` carrying `text` that the page does *not* consume makes headless
+    Chrome auto-repeat it thousands of times. It showed up only on the unbound
+    keys, since every bound key calls `preventDefault`. Sending every key as
+    `rawKeyDown` instead keeps `event.key` correct and is what the assertions
+    run against. Some phantom `Unidentified` repeats survive; they are all
+    `defaultPrevented: false`, so if anything they strengthen the claim that
+    unbound keys are left alone. This is the test harness, not the page.
+
+  ### Judgement calls, and one thing to overturn if you disagree
+
+  - Arrow keys still move the cursor after the game has ended. Reveal and mark
+    are inert, as the spec requires, but locking navigation too would trap a
+    screen-reader user who wants to read the final board, and arrow navigation
+    is the expected ARIA behaviour for a `role="grid"` regardless of game
+    state. If you read "further input has no effect" as covering cursor
+    movement as well, say so and it is a two-line change.
+  - The browser scrolls to keep the cursor cell in view as it moves. That is
+    `element.focus()` doing its job, not the arrow key's own scroll, which is
+    suppressed. Preventing it (`focus({ preventScroll: true })`) would let the
+    cursor walk off-screen on a small window, so it was left in place, and a
+    check asserts the cursor cell stays within the viewport.
+  - "New game" sends the roving tabindex home to (0,0) but does not steal
+    focus from the button the player just pressed, so a mouse user is not
+    yanked into the board. A keyboard player presses Tab once to get back.
+  - Pointer input moves the cursor to the clicked cell, so the visible cursor
+    and the roving tabindex never disagree with where the player last acted.
+  - Small addition beyond the plan's task list: the keyboard handler ignores
+    events carrying Alt, Ctrl or Meta, so browser and OS chords are untouched.
+    This narrows the binding surface rather than widening it.
+  - The status line stays empty, per this phase's Out of scope. Win and loss
+    messages are Phase 05.
 - Phase 05: not started.
 
 ## Handoff notes
@@ -421,30 +525,34 @@ the spec end to end.
 
 ## User gate
 
-- Phase 03 is implemented and awaiting your review. Review `index.html`,
-  `ui.js`, `styles.css`, and the 5 tests at the bottom of
-  `test/board.test.js`, run `node --test` yourself to watch all 32 pass, and
-  open `index.html` from Finder to see the grid.
-- What you cannot see yet, by design: nothing is clickable and no key does
-  anything. Phase 03 renders; Phase 04 wires input. The "New game" button and
-  the status line are present but inert.
-- Two questions from the Phase 02 gate that you moved past without answering.
-  Neither blocked this phase, and both were resolved in the direction the gate
-  recommended, but they are still yours to overturn:
-  - `snapshot()` still exposes `mine` on hidden cells. Rather than change the
-    snapshot, `ui.js` now holds the line: a hidden cell over a mine renders
-    byte-identically to any other hidden cell, verified in the browser. If you
-    still want the snapshot itself to withhold `mine`, say so -- it is a
-    `board.js` change plus a renderer tweak, and it gets more expensive once
-    Phase 05 starts reading `mine` to open the board at game end.
-  - The Phase 02 reading of "win with all ten marks placed wrongly" stands
-    unchanged; nothing in this phase depended on it.
-- One judgement call worth a look: the status line is `role="status"`, a live
-  region. The spec says there are "no live-region announcements of cascades or
-  game end beyond the status text itself", which reads as permitting exactly
-  this one. Without it a screen reader user is never told they won. Say so if
-  you read that sentence as forbidding it.
-- This is a good point for a checkpoint commit before Phase 04 wires input.
+- Phase 04 is implemented and awaiting your review. The game is now fully
+  playable. Review the input section at the bottom of `ui.js` and the 5 tests
+  at the end of `test/board.test.js`, run `node --test` yourself to watch all
+  37 pass, and open `index.html` from Finder and play a round.
+- Try in particular: arrow to a cell and press `F`, then `Enter` on it (nothing
+  should happen); `F` again to unmark, then `Enter`; arrow into a corner and
+  keep pressing (the cursor should stop, not wrap); right-click to mark;
+  right-click off the board (your normal context menu should still appear);
+  press `r` or `Escape` (nothing should happen -- there is deliberately no
+  restart key); then press the "New game" button.
+- What you cannot see yet, by design: hitting a mine ends the game and further
+  input goes inert, but the board does not open up and no "You lose" message
+  appears. End-state presentation is Phase 05.
+- Three items carried forward that you have not ruled on. None blocked this
+  phase; all are still yours to overturn:
+  - `snapshot()` still exposes `mine` on hidden cells, with `ui.js` holding the
+    line so nothing leaks into the DOM. Phase 05 is the phase that starts
+    reading `mine` to open the board at game end, so this is the last cheap
+    moment to change it if you want the snapshot itself to withhold it.
+  - The status line is `role="status"`, a live region, so a screen reader user
+    is told they won. Phase 05 is where it finally has something to say, so if
+    you read the spec's "no live-region announcements" sentence as forbidding
+    even this one, now is the time.
+  - The Phase 02 reading of "win with all ten marks placed wrongly" stands.
+- New this phase, and the one I would most like a second opinion on: arrow keys
+  still move the cursor after the game ends, while reveal and mark go inert.
+  The reasoning is in the Phase 04 evidence above.
+- This is a good point for a checkpoint commit before Phase 05.
 - Next stage if approved:
   `Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-gridsweep-plan.md`
 - If you want AI-assisted formal review of this phase first:
