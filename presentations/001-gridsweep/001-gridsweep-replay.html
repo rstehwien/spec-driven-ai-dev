@@ -161,14 +161,19 @@ body.resizing iframe { pointer-events: none; }
 .gate .g-h { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; color: var(--human); margin-bottom: 6px; }
 .gate .g-b { font-size: 13.5px; color: #EFE0CE; }
 
-/* The last thing most agent turns do is write the next prompt. */
+/* The last thing most agent turns do is write the next prompt. It is just another
+   agent action — a suggestion — so it stays neutral like the rest of the agent's
+   output (only the AGENT label carries the green) and does not compete with the
+   green turn-complete control that follows it. */
 .handover {
-  margin: 4px 0 16px; border: 1px solid var(--line); border-left: 2px solid var(--ai);
-  border-radius: 0 6px 6px 0; background: var(--ai-soft); padding: 11px 13px;
+  margin: 4px 0 16px; border: 1px solid var(--line);
+  border-radius: 6px; background: var(--panel); padding: 11px 13px;
   opacity: 0; animation: fadein .4s ease forwards;
 }
-.handover .ho-h { font: 400 10.5px/1.5 var(--mono); letter-spacing: .1em; color: var(--ai); margin-bottom: 9px; }
-.handover .ho-h span { color: var(--faint); letter-spacing: .03em; }
+.handover .ho-h { display: flex; align-items: baseline; gap: 6px; font: 400 10.5px/1.5 var(--mono); letter-spacing: .1em; color: var(--dim); margin-bottom: 9px; }
+.handover .ho-h b { font-weight: 400; color: var(--ai); }
+.handover .ho-h .tt { color: var(--dim); letter-spacing: .06em; }
+.handover .ho-h .wh { margin-left: auto; color: var(--faint); letter-spacing: .03em; }
 .ho-p {
   margin: 0 0 8px; padding: 9px 11px; border-radius: 4px; background: var(--bg);
   border: 1px dashed var(--line); font-family: var(--mono); font-size: 12px;
@@ -179,15 +184,26 @@ body.resizing iframe { pointer-events: none; }
 .ho-tag { display: block; margin-bottom: 6px; font-size: 9.5px; letter-spacing: .11em; color: var(--faint); }
 .ho-p.taken .ho-tag { color: var(--human); }
 .ho-n { margin-top: 10px; font-size: 12.5px; line-height: 1.5; color: #BFC9C3; }
-.handover.none { border-left-color: var(--human); background: transparent; }
+.handover.none { border-left: 2px solid var(--human); border-radius: 0 6px 6px 0; background: transparent; }
 .handover.none .ho-h { color: var(--human); }
 
-/* ---------- turn-complete bar ---------- */
+/* ---------- turn-complete: the SIMULATION PLAYER control ----------
+   Green so it pops as the one interactive thing at the end of a turn — the player
+   that pauses the run, reveals the real diff and launches the game. Now that the
+   agent's suggestion above is neutral, nothing else competes with it. */
 .turnend {
-  margin: 20px 0 8px; border: 1px solid var(--ai); border-radius: 7px;
+  margin: 22px 0 8px; border: 1px solid var(--ai); border-radius: 7px;
   background: var(--ai-soft); padding: 13px 14px; opacity: 0; animation: fadein .4s ease forwards;
 }
-.turnend .te-h { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; color: var(--ai); margin-bottom: 4px; }
+.turnend .te-h {
+  display: inline-flex; align-items: center; gap: 7px; margin-bottom: 6px;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; color: var(--ai);
+}
+.turnend .te-h::before {
+  content: ""; width: 0; height: 0; flex: none;
+  border-style: solid; border-width: 4px 0 4px 6px;
+  border-color: transparent transparent transparent var(--ai);
+}
 .turnend .te-b { font-size: 13px; color: #CDE0D6; margin-bottom: 11px; }
 .te-acts { display: flex; flex-wrap: wrap; gap: 8px; }
 .te-acts button, .te-acts a {
@@ -1455,7 +1471,7 @@ var STAGES = [
       scroll();
       return;
     }
-    box.appendChild(el("div", "ho-h", "SUGGESTED NEXT STEP <span>&middot; " + nx.where + "</span>"));
+    box.appendChild(el("div", "ho-h", "<b>AGENT</b> <span class='tt'>SUGGESTED NEXT STEP</span> <span class='wh'>&middot; " + nx.where + "</span>"));
     nx.options.forEach(function (o) {
       var pre = el("pre", "ho-p" + (o.taken ? " taken" : ""));
       pre.appendChild(el("span", "ho-tag", o.tag || (o.taken
