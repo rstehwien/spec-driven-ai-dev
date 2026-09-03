@@ -7,6 +7,11 @@ Use this structure when the user asks for a spec review:
 ```md
 # Spec Review
 
+## Budget and content check
+- word count: N of 1,000
+- target-state violations: history, rationale, process state, repo inventory, or agent-directed instructions found in the spec, each with the cut that fixes it
+- density: bold as a share of words, longest requirement, cross-reference count
+
 ## Issues
 - ambiguity
 - contradictions
@@ -35,39 +40,47 @@ Use this structure when the user asks for a spec review:
 
 Create `specs/NNN-questions-01.md` or the next numbered `specs/NNN-questions-YY.md` file with this structure. If the related spec uses a label (for example `001-auth-spec.md`), include the same label in the questions filename (`specs/001-auth-questions-01.md`). The label must stay consistent across the entire artifact set.
 
+Budget: 1,000 words. Every question carries a recommendation so the developer can settle it by accepting rather than by composing an answer. Every question still needs an explicit answer - a recommendation is never adopted by default.
+
 ```md
 # Questions for Spec 001 (or 001-auth)
 
 ## Repo Context Checked
-- file or directory: relevant fact already established
-- file or directory: constraint or behavior confirmed
+- file or directory: the fact it established, so it is not asked below
 
 ## Must Answer
-### Topic: [topic]
-1. Question
-2. Question
+
+### Q1 - [the question, one line]
+**Recommend:** [the answer you would choose, and why, in one or two sentences]
+**If wrong:** [what this changes if it is not what the developer wants]
+
+### Q2 - [the question, one line]
+**Recommend:** [...]
+**If wrong:** [...]
 
 ## Useful Clarifications
-### Topic: [topic]
-1. Question
-2. Question
+
+### Q3 - [the question, one line]
+**Recommend:** [...]
 
 ## How to Answer
-Use blockquoted labels for comments and feedback:
 
-> Decision:
-> The decision made was...
+To take the recommendation as written:
 
-> Question:
-> I have a question...
+> Decision: accept recommendation
 
-## Fallback Assumptions if Unanswered
-- assumption 1
-- assumption 2
+To override it:
+
+> Decision: [the answer]
+
+To defer, because it cannot be answered yet:
+
+> Question: [what you need first]
+
+Every question needs an answer. An unanswered question stays open and blocks the fold.
 
 ## User gate
-- answer this file directly, preferably using `> Decision:` for settled answers and `> Question:` for follow-up uncertainty
-- when you are ready, run `fold-questions` rather than skipping to planning
+- answer this file directly, then run `fold-questions`
 - example prompt: `Use the human-gated-spec-driven-ai-development skill to fold-questions from 001-questions-01.md into 001-spec.md` (or `001-auth-questions-01.md` into `001-auth-spec.md` when a label is used)
 ```
 
@@ -75,12 +88,14 @@ Use blockquoted labels for comments and feedback:
 
 Use this plan structure. If the related spec uses a label, the plan filename must use the same label (`specs/001-auth-plan.md`).
 
+Budget: 300 words per phase. A plan is a checklist, not a memo. It does not open with an inventory of the repository, does not restate the spec's requirements, and does not re-argue the questions file's decisions.
+
 ```md
 # Plan 001 (or 001-auth)
 
-## Repo Context Checked
-- file or directory: current module or contract to preserve
-- file or directory: current test or constraint that shapes the plan
+## Gaps
+- [something the spec assumes exists but does not, with `file:line`]
+- [max five lines across the whole plan; more means the spec needs another pass]
 
 ## Phase 01 - [title]
 

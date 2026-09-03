@@ -1,39 +1,58 @@
-# Open Questions
+# Questions for Spec [NNN]
 
 > Template for `specs/NNN-questions-YY.md` or `specs/NNN-<label>-questions-YY.md`.
 > Use the same `NNN` as the related spec and plan.
-> Use a two-digit suffix (`01`, `02`, `03`) and increment for each new clarification pass — do not overwrite or delete prior question sets.
-> When answering, use these blockquote labels so the AI knows how to fold each item:
+> Use a two-digit suffix (`01`, `02`, `03`) and increment for each new clarification pass -
+> do not overwrite or delete prior question sets.
 >
-> ```md
-> > Decision:
-> > The decision made was...
->
-> > Question:
-> > I have a question...
-> ```
->
-> `Decision` content gets folded into the spec. `Question` content stays as unresolved clarification.
+> **Budget: 1,000 words, hard ceiling 1,500.**
+> Ask only what changes what gets built. If both answers produce the same code, it is not a question.
+> **Every question carries a recommendation**, so answering can be one word.
 > Delete this blockquote before answering.
 
-## Context From Repo
+## Repo Context Checked
 
-- [files checked: e.g., `src/auth/middleware.ts`, `migrations/2026_01_add_users.sql`]
-- [what those files confirmed, and what they did not resolve]
+- [file or directory: the fact it established, so it is not asked below]
 
 ## Must Answer
 
-- [question that blocks planning]
-- [another blocking question]
+### Q1 - [the question, one line]
+
+**Recommend:** [the answer you would choose, and the reason, in one or two sentences.]
+**If wrong:** [what this changes if the recommendation is not what you want.]
+
+### Q2 - [the question, one line]
+
+**Recommend:** [...]
+**If wrong:** [...]
 
 ## Useful Clarifications
 
-- [question that improves the plan but is not blocking]
-- [another nice-to-have clarification]
+### Q3 - [the question, one line]
 
-## Fallback Assumptions
+**Recommend:** [...]
 
-If any of the above remain unanswered, the spec will assume:
+## How to Answer
 
-- [assumption that would apply if the corresponding question is not answered]
-- [another fallback assumption]
+Answer under each question with a blockquote.
+
+To take the recommendation as written:
+
+> Decision: accept recommendation
+
+To override it, say what you want instead:
+
+> Decision: [the answer]
+
+To defer, because it cannot be answered yet:
+
+> Question: [what you need first]
+
+**Every question needs an explicit answer.** A recommendation is never adopted by
+default - an unanswered question stays open and blocks the fold. Accepting is two
+words, so accepting is cheap; it is just never automatic.
+
+## User gate
+
+- answer this file directly, then run `fold-questions`
+- example prompt: `Use the human-gated-spec-driven-ai-development skill to fold-questions from NNN-questions-01.md into NNN-spec.md`
