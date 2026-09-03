@@ -1,0 +1,162 @@
+/* Gridsweep styling: one plain stylesheet, no theme switching, no animations,
+   nothing loaded from the network. */
+
+:root {
+  --cell-size: 2.25rem;
+  --board-bg: #b8b8b8;
+  --hidden-face: #d6d6d6;
+  --revealed-face: #ececec;
+  --edge-light: #f4f4f4;
+  --edge-dark: #8f8f8f;
+  --ink: #1c1c1c;
+  --focus: #0b62d0;
+}
+
+body {
+  margin: 0;
+  padding: 2rem 1rem;
+  background: #f7f7f7;
+  color: var(--ink);
+  font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Helvetica, Arial,
+    sans-serif;
+}
+
+.game {
+  max-width: 24rem;
+  margin: 0 auto;
+}
+
+h1 {
+  font-size: 1.4rem;
+  margin: 0 0 0.75rem;
+}
+
+.hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.counter {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+#mines-remaining {
+  font-weight: 700;
+}
+
+#new-game {
+  font: inherit;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--edge-dark);
+  border-radius: 4px;
+  background: var(--hidden-face);
+  color: inherit;
+  cursor: pointer;
+}
+
+#new-game:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.status {
+  margin: 0 0 0.5rem;
+  min-height: 1.45em; /* reserve the line so the board never shifts */
+  font-weight: 700;
+}
+
+/* The board */
+
+.board {
+  display: inline-block;
+  padding: 4px;
+  background: var(--board-bg);
+  border: 2px solid var(--edge-dark);
+  user-select: none;
+}
+
+.row {
+  display: flex;
+}
+
+.cell {
+  box-sizing: border-box;
+  width: var(--cell-size);
+  height: var(--cell-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+  line-height: 1;
+}
+
+/* A hidden cell is raised; a revealed cell is flat and inset. The two read as
+   different surfaces even before any digit is drawn. */
+.cell.hidden {
+  background: var(--hidden-face);
+  border: 2px outset var(--edge-light);
+  cursor: pointer;
+}
+
+.cell.revealed {
+  background: var(--revealed-face);
+  border: 1px solid var(--edge-dark);
+}
+
+.cell.marked {
+  color: #c00000;
+}
+
+.cell.mine {
+  background: #e8b4b4;
+  color: #000;
+}
+
+/* Classic per-digit colours. A zero-count revealed cell carries no count-N
+   class at all and so renders blank. */
+.cell.count-1 { color: #0000ff; }
+.cell.count-2 { color: #007b00; }
+.cell.count-3 { color: #ff0000; }
+.cell.count-4 { color: #00007b; }
+.cell.count-5 { color: #7b0000; }
+.cell.count-6 { color: #007b7b; }
+.cell.count-7 { color: #000000; }
+.cell.count-8 { color: #7b7b7b; }
+
+/* The cursor cell must be obvious. :focus rather than :focus-visible, because
+   the cursor is the game's own pointer and should show however it was moved. */
+.cell:focus {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+
+/* End of game.
+   .cell.exploded and .cell.wrong-mark carry the same specificity as the rules
+   they override (.cell.mine, .cell.hidden / .cell.marked), so they must stay
+   below them in the file: source order is what decides the cascade here. */
+
+/* The mine the player actually hit, as against the mines merely opened
+   alongside it: a hot face rather than the pale one. */
+.cell.exploded {
+  background: #d02020;
+  color: #ffffff;
+}
+
+/* A mark still sitting on a safe cell when the board opened. The glyph changes
+   from a flag to a cross, so this does not rely on colour alone. */
+.cell.wrong-mark {
+  background: #e6cfcf;
+  color: #a00000;
+}
+
+/* Nothing on a finished board responds any more, so it stops offering to. The
+   cursor still moves and every cell still reads to a screen reader. */
+.board.ended .cell.hidden {
+  cursor: default;
+}

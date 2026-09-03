@@ -1,0 +1,2009 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gridsweep, Replayed</title>
+<style>
+:root {
+  --bg: #0E120F; --chrome: #151B17; --panel: #171E1A; --panel-2: #1D251F;
+  --line: #29332C; --line-soft: #212a24;
+  --ink: #E9EDEA; --dim: #97A39B; --faint: #6B776F;
+  --ai: #55B98F; --ai-soft: #16281F;
+  --human: #E5924E; --human-soft: #2C2015;
+  --hand: #B98CD8; --hand-soft: #241C2F;
+  --file: #7EAEE0; --warn: #D9C35F; --bad: #E0705C;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--sans); font-size: 15px; line-height: 1.5;
+  overflow: hidden; -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- frame ---------- */
+.app { display: grid; grid-template-rows: 38px minmax(0,1fr) 58px; height: 100vh; height: 100dvh; }
+.titlebar {
+  display: flex; align-items: center; gap: 12px; padding: 0 12px;
+  background: var(--chrome); border-bottom: 1px solid var(--line);
+  font-family: var(--mono); font-size: 12px; color: var(--dim);
+}
+.lights { display: flex; gap: 6px; }
+.lights i { width: 11px; height: 11px; border-radius: 50%; display: block; }
+.lights i:nth-child(1) { background: #C4584C; }
+.lights i:nth-child(2) { background: #C4A44C; }
+.lights i:nth-child(3) { background: #4C9C63; }
+.tb-path { color: var(--ink); }
+.tb-path b { color: var(--dim); font-weight: 400; }
+.tb-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.badge-recon { border: 1px solid var(--human); color: var(--human); border-radius: 3px; padding: 1px 7px; font-size: 10.5px; letter-spacing: .09em; }
+.tb-btn { background: none; border: 1px solid var(--line); color: var(--dim); border-radius: 4px; font: inherit; font-size: 11px; padding: 2px 8px; cursor: pointer; }
+.tb-btn:hover { color: var(--ink); border-color: var(--faint); }
+.tb-btn[aria-pressed="true"] { color: var(--ai); border-color: var(--ai); }
+
+.stagearea {
+  display: grid;
+  grid-template-columns: var(--wL, 216px) 7px minmax(160px, 1fr) 7px var(--wR, 34%);
+  min-height: 0;
+}
+.grip {
+  position: relative; cursor: col-resize; background: var(--line);
+  border: none; padding: 0; touch-action: none;
+}
+.grip::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: -3px; right: -3px;
+}
+.grip:hover, .grip.dragging { background: var(--ai); }
+.grip:focus-visible { outline: 2px solid var(--ai); outline-offset: -1px; }
+body.resizing { cursor: col-resize; user-select: none; }
+body.resizing iframe { pointer-events: none; }
+
+/* ---------- explorer ---------- */
+.explorer { background: var(--panel); border-right: 1px solid var(--line); overflow: auto; padding: 10px 0 20px; }
+.ex-head { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; color: var(--faint); padding: 4px 14px 10px; }
+.ex-group { font-family: var(--mono); font-size: 12px; color: var(--dim); padding: 3px 14px; display: none; }
+.ex-group.live { display: block; }
+.ex-row {
+  display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 12px;
+  padding: 0 12px 0 14px; color: var(--faint);
+  opacity: 0; height: 0; overflow: hidden; transition: opacity .3s ease;
+}
+.ex-row.live { opacity: 1; height: auto; padding-top: 2px; padding-bottom: 2px; }
+.ex-row .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ex-row.in-1 { padding-left: 26px; }
+.ex-row .tag { margin-left: auto; font-size: 10px; width: 12px; text-align: center; flex: none; }
+.ex-row[data-state="new"], .ex-row[data-state="new"] .tag { color: var(--ai); }
+.ex-row[data-state="mod"], .ex-row[data-state="mod"] .tag { color: var(--file); }
+.ex-row[data-state="idle"] { color: var(--faint); }
+.ex-row[data-state="idle"] .tag { color: transparent; }
+.ex-row.hit { background: var(--ai-soft); border-radius: 3px; }
+.ex-legend { font-family: var(--mono); font-size: 10px; color: var(--faint); padding: 14px 14px 0; border-top: 1px solid var(--line-soft); margin-top: 12px; }
+
+/* ---------- chat ---------- */
+.chat { background: var(--bg); overflow: auto; padding: 18px 20px 40px; scroll-behavior: smooth; }
+.turnhead {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  font-family: var(--mono); font-size: 11px; color: var(--faint);
+  border-bottom: 1px solid var(--line-soft); padding-bottom: 8px; margin-bottom: 16px;
+}
+.turnhead .num { color: var(--ink); font-size: 12px; }
+.turnhead .ttl { color: var(--dim); font-size: 12px; }
+.turnhead .stagechip { color: var(--ai); }
+.turnhead .freechip { color: var(--human); }
+.turnhead .sha { margin-left: auto; color: var(--faint); }
+.turnhead .sha::before { content: "commit "; color: #4d574f; }
+
+.session {
+  display: flex; align-items: center; gap: 10px; margin: 0 0 16px;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; color: var(--faint);
+  opacity: 0; animation: fadein .4s ease forwards;
+}
+.session::before, .session::after { content: ""; height: 1px; background: var(--line); flex: 1; }
+.session::before { max-width: 18px; }
+.session b { color: var(--file); font-weight: 400; letter-spacing: .08em; }
+.session i { font-style: normal; color: var(--faint); letter-spacing: 0; text-transform: none; font-size: 11px; }
+
+.psrc { margin: 6px 0 16px; font-family: var(--mono); font-size: 10.5px; line-height: 1.5; color: var(--faint); }
+.psrc.own { color: var(--human); }
+.psrc.own::before { content: "\270E\00A0\00A0written by the developer\00A0\00B7\00A0"; }
+.psrc span { color: var(--faint); }
+
+.msg { margin: 0 0 14px; }
+.who { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; margin-bottom: 5px; }
+.who.human { color: var(--human); }
+.who.hand { color: var(--hand); }
+.who.ai { color: var(--ai); }
+.prompt {
+  background: var(--human-soft); border-left: 2px solid var(--human);
+  padding: 10px 13px; border-radius: 0 5px 5px 0;
+  font-family: var(--mono); font-size: 13px; line-height: 1.6;
+  white-space: pre-wrap; word-break: break-word; color: #F0DFCC; min-height: 1.6em;
+}
+.prompt .caret { display: inline-block; width: 7px; height: 1em; background: var(--human); vertical-align: -2px; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.prompt.done .caret { display: none; }
+.handnote { border-left: 2px solid var(--hand); background: var(--hand-soft); padding: 10px 13px; border-radius: 0 5px 5px 0; color: #E4D8EE; font-size: 13.5px; }
+.handnote em { color: var(--hand); font-style: normal; }
+
+.think { font-family: var(--mono); font-size: 12px; color: var(--faint); margin: 0 0 12px; }
+.think .row { display: flex; gap: 8px; opacity: 0; animation: fadein .35s ease forwards; }
+.think .row .sp { color: var(--ai); }
+.think.done .row .sp { color: var(--faint); }
+@keyframes fadein { to { opacity: 1; } }
+
+.tools { font-family: var(--mono); font-size: 12px; margin: 0 0 12px; }
+.tool { display: flex; gap: 8px; padding: 2px 0; color: var(--dim); opacity: 0; animation: fadein .3s ease forwards; }
+.tool .k { color: var(--faint); width: 54px; flex: none; text-transform: uppercase; font-size: 10px; letter-spacing: .07em; padding-top: 2px; }
+.tool .v { word-break: break-word; }
+.tool .v b { color: var(--file); font-weight: 400; }
+.tool .v i { color: var(--faint); font-style: normal; }
+.tool.ok .k { color: var(--ai); }
+
+.diffbox { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; margin: 0 0 14px; opacity: 0; animation: fadein .35s ease forwards; }
+.diffbox h4 { margin: 0; padding: 7px 12px; background: var(--panel); border-bottom: 1px solid var(--line); font: 400 10.5px/1.4 var(--mono); letter-spacing: .1em; color: var(--faint); }
+.dfile { display: flex; align-items: center; gap: 10px; padding: 4px 12px; font-family: var(--mono); font-size: 12px; opacity: 0; animation: fadein .3s ease forwards; }
+.dfile .st { width: 12px; flex: none; }
+.dfile.a .st { color: var(--ai); }
+.dfile.m .st { color: var(--file); }
+.dfile .p { color: var(--dim); word-break: break-all; }
+.dfile .n { margin-left: auto; flex: none; letter-spacing: -.02em; }
+.dfile .n .p1 { color: var(--ai); }
+.dfile .n .m1 { color: var(--bad); }
+
+.say { font-size: 14.5px; color: #D6DED9; opacity: 0; animation: fadein .5s ease forwards; }
+.say code { font-family: var(--mono); font-size: .88em; background: var(--panel-2); padding: 1px 5px; border-radius: 3px; color: var(--ai); }
+.say strong { color: var(--ink); }
+
+.gate { margin: 16px 0 4px; border: 1px solid var(--human); border-radius: 6px; background: var(--human-soft); padding: 12px 14px; opacity: 0; animation: fadein .4s ease forwards; }
+.gate .g-h { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; color: var(--human); margin-bottom: 6px; }
+.gate .g-b { font-size: 13.5px; color: #EFE0CE; }
+
+/* The last thing most agent turns do is write the next prompt. It is just another
+   agent action — a suggestion — so it stays neutral like the rest of the agent's
+   output (only the AGENT label carries the green) and does not compete with the
+   green turn-complete control that follows it. */
+.handover {
+  margin: 4px 0 16px; border: 1px solid var(--line);
+  border-radius: 6px; background: var(--panel); padding: 11px 13px;
+  opacity: 0; animation: fadein .4s ease forwards;
+}
+.handover .ho-h { display: flex; align-items: baseline; gap: 6px; font: 400 10.5px/1.5 var(--mono); letter-spacing: .1em; color: var(--dim); margin-bottom: 9px; }
+.handover .ho-h b { font-weight: 400; color: var(--ai); }
+.handover .ho-h .tt { color: var(--dim); letter-spacing: .06em; }
+.handover .ho-h .wh { margin-left: auto; color: var(--faint); letter-spacing: .03em; }
+.ho-p {
+  margin: 0 0 8px; padding: 9px 11px; border-radius: 4px; background: var(--bg);
+  border: 1px dashed var(--line); font-family: var(--mono); font-size: 12px;
+  line-height: 1.55; color: #8E9A93; white-space: pre-wrap; word-break: break-word;
+}
+.ho-p:last-of-type { margin-bottom: 0; }
+.ho-p.taken { border: 1px solid var(--human); background: var(--human-soft); color: #F0DFCC; }
+.ho-tag { display: block; margin-bottom: 6px; font-size: 9.5px; letter-spacing: .11em; color: var(--faint); }
+.ho-p.taken .ho-tag { color: var(--human); }
+.ho-n { margin-top: 10px; font-size: 12.5px; line-height: 1.5; color: #BFC9C3; }
+.handover.none { border-left: 2px solid var(--human); border-radius: 0 6px 6px 0; background: transparent; }
+.handover.none .ho-h { color: var(--human); }
+
+/* ---------- turn-complete: the SIMULATION PLAYER control ----------
+   Green so it pops as the one interactive thing at the end of a turn — the player
+   that pauses the run, reveals the real diff and launches the game. Now that the
+   agent's suggestion above is neutral, nothing else competes with it. */
+.turnend {
+  margin: 22px 0 8px; border: 1px solid var(--ai); border-radius: 7px;
+  background: var(--ai-soft); padding: 13px 14px; opacity: 0; animation: fadein .4s ease forwards;
+}
+.turnend .te-h {
+  display: inline-flex; align-items: center; gap: 7px; margin-bottom: 6px;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; color: var(--ai);
+}
+.turnend .te-h::before {
+  content: ""; width: 0; height: 0; flex: none;
+  border-style: solid; border-width: 4px 0 4px 6px;
+  border-color: transparent transparent transparent var(--ai);
+}
+.turnend .te-b { font-size: 13px; color: #CDE0D6; margin-bottom: 11px; }
+.te-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.te-acts button, .te-acts a {
+  font: 400 12.5px/1 var(--sans); padding: 9px 13px; border-radius: 5px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.te-acts button:hover, .te-acts a:hover { border-color: var(--ai); color: var(--ai); }
+.te-acts .primary { background: var(--ai); border-color: var(--ai); color: #06110C; font-weight: 600; }
+.te-acts .primary:hover { filter: brightness(1.08); color: #06110C; }
+.te-acts kbd { font-family: var(--mono); font-size: 10px; border: 1px solid currentColor; border-radius: 3px; padding: 0 3px; opacity: .55; }
+
+/* ---------- right panel ---------- */
+.side { background: var(--panel); border-left: 1px solid var(--line); overflow: auto; padding: 0 0 30px; }
+.side-head { position: sticky; top: 0; background: var(--panel); border-bottom: 1px solid var(--line); padding: 10px 16px; font: 400 10.5px/1.4 var(--mono); letter-spacing: .12em; color: var(--faint); z-index: 2; }
+.card { margin: 14px 16px; opacity: 0; animation: fadein .5s ease forwards; }
+.card > h3 { margin: 0 0 8px; font: 400 10.5px/1.4 var(--mono); letter-spacing: .12em; color: var(--faint); }
+
+.shot { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: #fff; position: relative; }
+.shot img { display: block; width: 100%; }
+.shot-cap { font-size: 12px; color: var(--dim); margin-top: 7px; line-height: 1.45; }
+.shot-missing { padding: 26px 14px; background: var(--panel-2); color: var(--faint); font-family: var(--mono); font-size: 11.5px; text-align: center; }
+
+.film .frames { display: flex; gap: 5px; margin-top: 8px; align-items: center; }
+.film .frames button { width: 9px; height: 9px; padding: 0; border-radius: 50%; border: 1px solid var(--faint); background: none; cursor: pointer; }
+.film .frames button[aria-current="true"] { background: var(--ai); border-color: var(--ai); }
+.film .frames .lbl { font-family: var(--mono); font-size: 10px; color: var(--faint); margin-left: 6px; }
+.film .frames .rep { width: auto; height: auto; border-radius: 4px; padding: 2px 7px; font: 400 10px var(--mono); color: var(--dim); }
+.film .frames .rep:hover { color: var(--ai); border-color: var(--ai); }
+
+.doc { border: 1px solid var(--line); border-radius: 6px; background: var(--bg); overflow: hidden; }
+.doc .doc-h { padding: 6px 11px; background: var(--panel-2); border-bottom: 1px solid var(--line); font: 400 11px/1.4 var(--mono); color: var(--file); }
+.doc pre { margin: 0; padding: 11px; font-family: var(--mono); font-size: 11.5px; line-height: 1.65; color: #C7D1CA; white-space: pre-wrap; word-break: break-word; }
+.doc pre .dec { color: var(--hand); }
+.doc pre .hd { color: var(--ink); }
+.doc pre .cm { color: var(--faint); }
+.doc pre .ad { color: var(--ai); }
+.doc pre .rm { color: var(--bad); }
+
+.term { border: 1px solid var(--line); border-radius: 6px; background: #090C0A; padding: 10px 12px; font-family: var(--mono); font-size: 11.5px; line-height: 1.7; color: #B9C4BC; white-space: pre-wrap; }
+.term .cmd { color: var(--ink); }
+.term .cmd::before { content: "$ "; color: var(--ai); }
+.term .pass { color: var(--ai); }
+.term .zero { color: var(--faint); }
+
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; font-size: 12.5px; }
+.kv dt { color: var(--dim); padding: 4px 0; border-bottom: 1px solid var(--line-soft); }
+.kv dd { margin: 0; padding: 4px 0; text-align: right; font-family: var(--mono); color: var(--ink); border-bottom: 1px solid var(--line-soft); }
+.kv dd.hi { color: var(--ai); }
+.kv dd.warnv { color: var(--warn); }
+
+.bullets { margin: 0; padding-left: 17px; font-size: 13px; color: #CBD4CE; }
+.bullets li { margin-bottom: 6px; }
+.bullets li b { color: var(--ink); font-weight: 600; }
+
+.quote { border-left: 2px solid var(--ai); background: var(--ai-soft); padding: 11px 13px; border-radius: 0 5px 5px 0; }
+.quote p { margin: 0 0 8px; font-size: 13px; color: #CFDCD5; }
+.quote p:last-of-type { margin-bottom: 0; }
+.quote b { color: var(--ink); }
+.quote code { font-family: var(--mono); font-size: .88em; color: var(--ai); }
+.qsrc { margin-top: 9px; font-family: var(--mono); font-size: 10.5px; color: var(--faint); }
+.qsrc::before { content: "— "; }
+
+.decisions { border-left: 2px solid var(--hand); background: var(--hand-soft); border-radius: 0 5px 5px 0; padding: 4px 0; }
+.decisions li { list-style: none; padding: 8px 13px; border-bottom: 1px solid rgba(185,140,216,.16); font-size: 12.5px; color: #E4D8EE; }
+.decisions li:last-child { border-bottom: none; }
+.decisions ul { margin: 0; padding: 0; }
+.decisions .q { display: block; color: var(--faint); font-family: var(--mono); font-size: 10.5px; margin-bottom: 3px; }
+.decisions .d { color: var(--hand); }
+.decisions .d::before { content: "> Decision: "; font-family: var(--mono); font-size: .88em; opacity: .75; }
+.decisions .defer { color: var(--warn); }
+.decisions .defer::before { content: "> Deferred: "; font-family: var(--mono); font-size: .88em; opacity: .75; }
+
+.callout { border-left: 2px solid var(--warn); background: #1F1E14; padding: 10px 12px; border-radius: 0 5px 5px 0; font-size: 13px; color: #E0DBC2; }
+.callout.miss { border-color: var(--bad); background: #241715; color: #EBD2CC; }
+.callout b { color: #fff; }
+
+/* ---------- transport ---------- */
+.transport { display: flex; align-items: center; gap: 14px; padding: 0 14px; background: var(--chrome); border-top: 1px solid var(--line); }
+.tbtn { background: none; border: 1px solid var(--line); color: var(--ink); width: 32px; height: 32px; border-radius: 5px; cursor: pointer; font-size: 13px; display: grid; place-items: center; flex: none; font-family: var(--mono); }
+.tbtn:hover { border-color: var(--ai); color: var(--ai); }
+.tbtn.play { width: 38px; height: 34px; }
+.tbtn.play.atend { border-color: var(--ai); color: var(--ai); }
+.track { flex: 1; min-width: 0; position: relative; height: 34px; cursor: pointer; }
+.track-line { position: absolute; left: 0; right: 0; top: 15px; height: 4px; border-radius: 2px; background: #29332C; }
+.track-fill { position: absolute; left: 0; top: 15px; height: 4px; border-radius: 2px; background: var(--ai); width: 0; }
+.tick { position: absolute; top: 9px; width: 2px; height: 16px; background: #3d4941; transform: translateX(-1px); }
+.tick.human { background: var(--hand); }
+.tick.done { opacity: .4; }
+.tstamp { font-family: var(--mono); font-size: 11.5px; color: var(--dim); flex: none; }
+.tlabel { font-family: var(--mono); font-size: 11.5px; color: var(--faint); flex: none; max-width: 26ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tlabel b { color: var(--ink); font-weight: 400; }
+.speed { display: flex; gap: 3px; flex: none; }
+.speed button { background: none; border: 1px solid var(--line); color: var(--faint); font: 400 11px var(--mono); padding: 3px 6px; border-radius: 4px; cursor: pointer; }
+.speed button[aria-pressed="true"] { color: var(--ai); border-color: var(--ai); }
+
+/* ---------- explore sheet ---------- */
+.sheet { position: fixed; inset: 38px 0 58px; z-index: 35; background: var(--bg); display: grid; grid-template-rows: 46px minmax(0,1fr); }
+.sheet[hidden] { display: none; }
+.sheet-bar { display: flex; align-items: center; gap: 12px; padding: 0 14px; background: var(--chrome); border-bottom: 1px solid var(--line); }
+.sheet-title { font-family: var(--mono); font-size: 11.5px; color: var(--dim); flex: none; }
+.sheet-title b { color: var(--ink); font-weight: 400; }
+.tabs { display: flex; gap: 4px; }
+.tabs button { background: none; border: 1px solid transparent; color: var(--dim); font: 400 12.5px var(--sans); padding: 5px 12px; border-radius: 5px; cursor: pointer; }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-selected="true"] { color: var(--ai); border-color: var(--ai); background: var(--ai-soft); }
+.sheet-bar .spacer { margin-left: auto; }
+.sheet-bar a, .sheet-bar .xbtn { font: 400 12px var(--sans); color: var(--dim); text-decoration: none; border: 1px solid var(--line); border-radius: 5px; padding: 5px 11px; background: none; cursor: pointer; }
+.sheet-bar a:hover, .sheet-bar .xbtn:hover { color: var(--ink); border-color: var(--faint); }
+.sheet-body { min-height: 0; position: relative; }
+.pane { position: absolute; inset: 0; overflow: auto; }
+.pane[hidden] { display: none; }
+
+/* diff pane */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 16px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 2; }
+.chips a, .chips button { font-family: var(--mono); font-size: 11px; color: var(--dim); background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; cursor: pointer; text-decoration: none; }
+.chips button:hover { color: var(--ai); border-color: var(--ai); }
+.chips a:hover { color: var(--file); border-color: var(--file); }
+.chips .lead { border: none; background: none; color: var(--faint); padding: 4px 2px; cursor: default; }
+.dfileblk { border-bottom: 1px solid var(--line-soft); }
+.dfileblk > h4 {
+  margin: 0; padding: 9px 16px; background: var(--panel); border-top: 1px solid var(--line);
+  font: 400 12px/1.4 var(--mono); color: var(--file); position: sticky; top: 45px; z-index: 1;
+  display: flex; align-items: center; gap: 10px;
+}
+.dfileblk > h4 a { margin-left: auto; font-size: 11px; color: var(--faint); text-decoration: none; border: 1px solid var(--line); border-radius: 4px; padding: 2px 7px; }
+.dfileblk > h4 a:hover { color: var(--file); border-color: var(--file); }
+.dfileblk pre { margin: 0; padding: 8px 0; font-family: var(--mono); font-size: 11.5px; line-height: 1.6; overflow-x: auto; }
+.dfileblk pre span { display: block; padding: 0 16px; white-space: pre; }
+.dfileblk pre .ad { color: #A9E6C6; background: #12251C; }
+.dfileblk pre .rm { color: #F0B0A4; background: #241715; }
+.dfileblk pre .hh { color: var(--warn); background: #1B1F1D; }
+.dfileblk pre .ctx { color: #909B94; }
+.emptydiff { padding: 40px 20px; text-align: center; color: var(--faint); font-size: 13.5px; }
+.emptydiff code { font-family: var(--mono); color: var(--dim); }
+
+/* game pane */
+.gamewrap { display: grid; grid-template-rows: auto minmax(0,1fr); height: 100%; }
+.gamenote { padding: 11px 16px; border-bottom: 1px solid var(--line); font-size: 13px; color: #C3CCC6; background: var(--panel); }
+.gamenote b { color: var(--ink); }
+.gamenote .hint { color: var(--faint); font-size: 12px; }
+.gamehost { background: #6E7A72; display: grid; place-items: start center; overflow: auto; padding: 20px; }
+.gamehost iframe { width: 680px; max-width: 100%; height: 530px; border: 0; border-radius: 6px; background: #fff; box-shadow: 0 6px 30px rgba(0,0,0,.35); }
+
+/* ---------- overlays ---------- */
+.overlay { position: fixed; inset: 0; background: rgba(10,13,11,.94); z-index: 40; display: grid; place-items: center; padding: 28px; overflow: auto; }
+.overlay[hidden] { display: none; }
+.ocard { max-width: 740px; }
+.ocard .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; color: var(--human); margin-bottom: 12px; }
+.ocard h1 { margin: 0 0 6px; font-size: clamp(30px, 5vw, 46px); line-height: 1.08; letter-spacing: -.02em; }
+.ocard h2 { margin: 0 0 18px; font-size: clamp(16px, 2.2vw, 20px); font-weight: 400; color: var(--dim); }
+.ocard p { color: #C3CCC6; font-size: 14.5px; margin: 0 0 12px; }
+.ocard p b { color: var(--ink); }
+.ocard .honest { border-left: 2px solid var(--human); padding: 10px 14px; background: var(--human-soft); border-radius: 0 5px 5px 0; font-size: 13.5px; color: #E9D9C7; margin: 18px 0 22px; }
+.ocard .honest b { color: var(--human); }
+.bigbtn { background: var(--ai); color: #06110C; border: none; border-radius: 6px; font: 600 15px/1 var(--sans); padding: 13px 24px; cursor: pointer; }
+.bigbtn:hover { filter: brightness(1.08); }
+.ghostbtn { background: none; color: var(--dim); border: 1px solid var(--line); border-radius: 6px; font: 400 14px/1 var(--sans); padding: 13px 18px; cursor: pointer; margin-left: 10px; }
+.ghostbtn:hover { color: var(--ink); border-color: var(--faint); }
+.keys { margin-top: 20px; font-family: var(--mono); font-size: 11.5px; color: var(--faint); line-height: 1.9; }
+.keys kbd { border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; color: var(--dim); }
+
+/* ---------- notes ---------- */
+.notes { position: fixed; left: 0; right: 0; bottom: 58px; z-index: 30; background: #14100A; border-top: 1px solid var(--human); padding: 12px 18px; font-size: 13.5px; color: #E9D9C7; max-height: 34vh; overflow: auto; }
+.notes[hidden] { display: none; }
+.notes .nh { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; color: var(--human); margin-bottom: 5px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  .chat { scroll-behavior: auto; }
+}
+@media (max-width: 1400px) { .shot-row { grid-template-columns: 1fr; } }
+@media (max-width: 1080px) {
+  .stagearea { grid-template-columns: minmax(160px,1fr) 7px var(--wR, 40%); }
+  .explorer, #gripL { display: none; }
+}
+@media (max-width: 780px) {
+  .stagearea { grid-template-columns: minmax(0,1fr); grid-template-rows: 1fr 1fr; }
+  .explorer, .grip { display: none; }
+  .side { border-left: none; border-top: 1px solid var(--line); }
+  .tlabel, .tstamp { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="titlebar">
+    <span class="lights"><i></i><i></i><i></i></span>
+    <span class="tb-path"><b>~/gridsweep-demo &rsaquo;</b> agent session</span>
+    <span class="tb-right">
+      <button class="tb-btn" id="autobtn" aria-pressed="false" title="Keep playing through every turn instead of stopping at each one">Auto-advance</button>
+      <button class="tb-btn" id="notesbtn" aria-pressed="false">Notes <b>N</b></button>
+      <button class="tb-btn" id="fsbtn">Full screen <b>F</b></button>
+      <span class="badge-recon" title="Prompts, commits, diffs and screenshots are real. The agent's intermediate steps are dramatised.">RECONSTRUCTION</span>
+    </span>
+  </div>
+
+  <div class="stagearea">
+    <aside class="explorer" id="explorer" aria-label="Workspace files">
+      <div class="ex-head">GRIDSWEEP-DEMO</div>
+      <div id="tree"></div>
+      <div class="ex-legend">A&nbsp; added this turn<br>M&nbsp; modified this turn</div>
+    </aside>
+
+    <div class="grip" id="gripL" role="separator" aria-orientation="vertical" tabindex="0"
+         aria-label="Resize the file explorer" title="Drag to resize · double-click to reset"></div>
+
+    <main class="chat" id="chat" aria-live="polite" aria-label="Agent session transcript"></main>
+
+    <div class="grip" id="gripR" role="separator" aria-orientation="vertical" tabindex="0"
+         aria-label="Resize the detail panel" title="Drag to resize · double-click to reset"></div>
+
+    <aside class="side" id="side" aria-label="Stage detail">
+      <div class="side-head" id="sidehead">WHAT CAME OUT</div>
+      <div id="sidebody"></div>
+    </aside>
+  </div>
+
+  <div class="transport">
+    <button class="tbtn" id="prev" title="Previous turn (&larr;)" aria-label="Previous turn">&#9198;</button>
+    <button class="tbtn play" id="playpause" title="Play / pause (Space)" aria-label="Play or pause">&#9654;</button>
+    <button class="tbtn" id="next" title="Next turn (&rarr;)" aria-label="Next turn">&#9197;</button>
+    <span class="tstamp" id="clock">0:00 / 0:00</span>
+    <div class="track" id="track" role="slider" aria-label="Timeline" tabindex="0" aria-valuemin="1" aria-valuemax="14" aria-valuenow="1">
+      <div class="track-line"></div>
+      <div class="track-fill" id="fill"></div>
+      <div id="ticks"></div>
+    </div>
+    <span class="tlabel" id="tlabel"></span>
+    <div class="speed" id="speed">
+      <button data-s="0.5">0.5&times;</button>
+      <button data-s="1" aria-pressed="true">1&times;</button>
+      <button data-s="2">2&times;</button>
+      <button data-s="4">4&times;</button>
+    </div>
+  </div>
+</div>
+
+<section class="sheet" id="sheet" hidden aria-label="Inspect this turn">
+  <div class="sheet-bar">
+    <span class="sheet-title" id="sheettitle"></span>
+    <nav class="tabs" id="tabs" role="tablist">
+      <button role="tab" data-tab="diff" aria-selected="true">What changed</button>
+      <button role="tab" data-tab="game" aria-selected="false">Play the game</button>
+    </nav>
+    <span class="spacer"></span>
+    <a id="ghlink" href="#" target="_blank" rel="noopener noreferrer">Open this commit on GitHub &#8599;</a>
+    <button class="xbtn" id="sheetclose" title="Close (Esc)">Close &#10005;</button>
+  </div>
+  <div class="sheet-body">
+    <div class="pane" id="pane-diff"></div>
+    <div class="pane" id="pane-game" hidden></div>
+  </div>
+</section>
+
+<div class="notes" id="notes" hidden>
+  <div class="nh">PRESENTER NOTE</div>
+  <div id="notesbody"></div>
+</div>
+
+<div class="overlay" id="intro">
+  <div class="ocard">
+    <div class="eyebrow">HUMAN-GATED SPEC-DRIVEN AI DEVELOPMENT &middot; CYCLE 001</div>
+    <h1>Gridsweep, Replayed</h1>
+    <h2>Fourteen turns, from a 49-line spec to a finished game &mdash; one turn at a time.</h2>
+    <p>Nobody filmed the original run. This is the next best thing: the fourteen commits in
+      <b>examples/gridsweep/</b>, replayed in order. Each turn plays out &mdash; the prompt typed in,
+      the agent working, the files changing &mdash; and then <b>stops</b>, so you can read the real
+      diff, play the actual game as it stood at that commit, or open the commit on GitHub before
+      moving on.</p>
+    <div class="honest">
+      <b>What is real:</b> every prompt, every commit, every diff, every screenshot &mdash; read
+      straight out of the repository, and the playable game is the code from that commit.<br>
+      <b>What is not:</b> the pacing, and the agent's intermediate steps. Nobody recorded the tool
+      calls, so the lines under &ldquo;working&rdquo; are a plausible reconstruction, not a transcript.
+    </div>
+    <button class="bigbtn" id="startbtn">&#9654;&nbsp; Start the run</button>
+    <button class="ghostbtn" id="skipbtn">Jump to a turn</button>
+    <div class="keys">
+      <kbd>Space</kbd> play / next turn &nbsp; <kbd>&larr;</kbd> <kbd>&rarr;</kbd> turn &nbsp;
+      <kbd>D</kbd> what changed &nbsp; <kbd>G</kbd> play the game &nbsp; <kbd>Esc</kbd> close<br>
+      <kbd>N</kbd> presenter notes &nbsp; <kbd>F</kbd> full screen &nbsp; <kbd>1</kbd>&ndash;<kbd>4</kbd> speed
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="outro" hidden>
+  <div class="ocard">
+    <div class="eyebrow">END OF CYCLE 001</div>
+    <h1>And then a human played it.</h1>
+    <p>Eight acceptance criteria. Fifty-four automated tests. A headless-Chrome sweep driving real
+      keys and clicks. A phase-by-phase acceptance walk. A final review.
+      <b>None of them could notice that the game never tells you which keys to press.</b></p>
+    <p>A person found it in minutes of actually playing &mdash; the same way you just did, if you
+      opened <b>Play the game</b> on any of the last six turns. That finding, and the misplaced
+      &ldquo;New game&rdquo; button beside it, became cycle 002.</p>
+    <div class="honest">
+      The process is very good at holding code to a spec. It has no mechanism for noticing what the
+      spec <b>forgot to want</b> &mdash; which is exactly what the human gates are for.
+    </div>
+    <button class="bigbtn" id="replaybtn">&#8635;&nbsp; Replay from the top</button>
+    <button class="ghostbtn" id="closeoutro">Back to the last turn</button>
+  </div>
+</div>
+
+<script src="replay/diffs.js"></script>
+
+<script>
+/* ==========================================================================
+   Gridsweep, Replayed
+   A reconstruction of cycle 001 of the human-gated-spec-driven-ai-development
+   workflow, built from examples/gridsweep/ in this repository.
+
+   Real:  every prompt (examples/gridsweep/prompts.md), every commit sha, every
+          file and line count (git numstat), every diff (git show, in
+          replay/diffs.js), every screenshot (headless Chrome, driven against
+          the game as it stood at that commit), and the playable game in the
+          "Play the game" tab, which is that commit's own source.
+   Not:   the pacing, and the tool lines under "working" - the original session
+          was never recorded, so those are a plausible reconstruction.
+
+   Everything loaded from disk is regenerated by replay/capture.sh.
+   ========================================================================== */
+
+var REPO_URL = "https://github.com/rstehwien/spec-driven-ai-dev";
+var REPO_DIR = "examples/gridsweep";
+var ASSETS   = "replay/";
+
+/* --- the workspace, in explorer order ------------------------------------ */
+var TREE = [
+  "specs/001-gridsweep-spec.md",
+  "specs/001-gridsweep-questions-01.md",
+  "specs/001-gridsweep-plan.md",
+  "specs/001-gridsweep-final-review.md",
+  "specs/001-gridsweep-retro.md",
+  "test/board.test.js",
+  "test/browser.test.js",
+  "tools/chrome-driver.js",
+  "board.js",
+  "ui.js",
+  "index.html",
+  "styles.css",
+  "prompts.md"
+];
+
+/* --- the fourteen turns --------------------------------------------------
+   skill:    one of the skill's seven stage commands - review-spec,
+             generate-questions, fold-questions, generate-plan,
+             implement-next-phase, review-phase, final-review.
+   freeform: for turns that are none of those. Everything after final-review is
+             a plain request: the skill describes a "bounded improvement cycle"
+             as what follows a review, but it is not a stage command, and there
+             is no retro command at all.
+   game:     which commit's source the "Play the game" tab should load, or null
+             before any page exists. Commits that changed no runtime file point
+             at the last commit that did.
+   gameKind: "stub" (no board yet), "inert" (a board that ignores input), "live".
+   ------------------------------------------------------------------------- */
+var STAGES = [
+{
+  n: "00", sha: "e32e783", title: "The starting spec", actor: "human", game: null,
+  hand: "No prompt. A 49-line spec, written by hand, is the entire repository. <em>It never says how you win.</em>",
+  files: [ {p:"specs/001-gridsweep-spec.md", k:"A", a:49, d:0} ],
+  panels: [
+    {t:"doc", h:"WHAT THE AGENT WAS GIVEN", f:"specs/001-gridsweep-spec.md",
+     body:"<span class='hd'>## Acceptance Criteria</span>\n\n- Revealing a mine ends the game as a loss.\n- Every revealed safe cell displays its adjacent-mine\n  count.\n- Revealing a safe cell with a zero count cascades to\n  reveal the surrounding region.\n- Once the game has ended, further input has no effect.\n- The board logic has automated test coverage and the\n  suite passes.\n\n<span class='cm'>&lt;- and that is the end of the file</span>"},
+    {t:"note", body:"Five criteria for losing, cascading, and locking. <b>Not one of them describes winning</b> &mdash; even though &ldquo;once the game has ended&rdquo; quietly assumes a win state exists."}
+  ],
+  notes: "Open here. Let the room read the acceptance criteria and ask what is missing before you move on. The gap is deliberate: this is the spec an experienced developer would actually write, and it is still incomplete."
+},
+{
+  n: "01", sha: "3087d07", title: "review-spec", actor: "ai", skill: "review-spec", game: null,
+  prompt: "Use the human-gated-spec-driven-ai-development skill to review-spec for #file:specs/001-gridsweep-spec.md.",
+  psrc: {own:true, why:"nothing preceded it \u2014 the only prompt in the run with no turn behind it"},
+  think: [
+    "Loading skill: human-gated-spec-driven-ai-development",
+    "Checking repo context - no code, no plan, spec only",
+    "Testing the spec for decisions a plan could not make for itself",
+    "Grouping the gaps into must-answer topics"
+  ],
+  tools: [
+    {k:"read",   v:"<b>specs/001-gridsweep-spec.md</b> <i>&middot; 49 lines</i>"},
+    {k:"search", v:"package.json, test runner, existing source <i>&middot; 0 matches</i>"},
+    {k:"think",  v:"5 must-answer topics, 1 clarification topic <i>&middot; 15 questions</i>"},
+    {k:"write",  v:"<b>specs/001-gridsweep-questions-01.md</b>"},
+    {k:"edit",   v:"<b>prompts.md</b>"}
+  ],
+  files: [
+    {p:"specs/001-gridsweep-questions-01.md", k:"A", a:201, d:0},
+    {p:"prompts.md", k:"M", a:6, d:0}
+  ],
+  say: "Fifteen numbered questions across five must-answer topics. Each one carries why it matters, a proposed fallback, and the cost of getting it wrong. <strong>The first topic is the win condition.</strong>",
+  panels: [
+    {t:"list", h:"WHERE THE FIFTEEN QUESTIONS LANDED", items:[
+      "<b>Win condition</b> &mdash; the spec never defines one",
+      "<b>How tests run without a build step</b> &mdash; the constraints rule out every third-party runner",
+      "<b>Marking suspected mines</b> &mdash; named in the spec, never specified",
+      "<b>Input</b> &mdash; which keys, and what the pointer does",
+      "<b>End of game</b> &mdash; what the finished board shows",
+      "<i>Display details</i> &mdash; the one topic filed as a clarification, not a blocker"
+    ]},
+    {t:"quote", h:"WHY THE FIRST ONE IS A GATE, NOT A NOTE",
+     body:["<b>Cost if wrong:</b> cheap now, expensive later. The win predicate sits at the centre of the state machine and is the thing tests assert against; changing it after the logic module and its test suite exist means reworking both."],
+     src:"specs/001-gridsweep-questions-01.md, question 1"},
+    {t:"note", body:"Every question carries a proposed fallback <i>and</i> that costing. <b>The agent did not invent a win condition and carry on &mdash; it refused to guess, and priced the guess.</b>"}
+  ],
+  next: {
+    where: "written into specs/001-gridsweep-questions-01.md \u00b7 User gate",
+    options: [{taken:true, text:"Use the human-gated-spec-driven-ai-development skill to fold-questions from 001-gridsweep-questions-01.md into 001-gridsweep-spec.md"}],
+    note: "The developer answers the fifteen questions by hand first &mdash; that is the next turn &mdash; and only then pastes this into an empty session."
+  },
+  notes: "The payoff turn of the demo. The agent found the hole in the spec without being told there was one. Open 'What changed' and read a couple of the fifteen aloud - the room will recognise most of them as arguments they have had."
+},
+{
+  n: "02", sha: "9061655", title: "Answering the questions", actor: "human", game: null,
+  hand: "No prompt. Fifteen answers, written by hand into the questions file as <em>&gt; Decision:</em> blocks. The agent is not running.",
+  files: [ {p:"specs/001-gridsweep-questions-01.md", k:"M", a:30, d:0} ],
+  panels: [
+    {t:"quote", h:"WHAT THE RETRO SAID ABOUT THIS, TWELVE TURNS LATER",
+     body:["<b>&gt; Decision: inline in the review.</b> Answering each finding where it was written, rather than in a summary at the end, meant no decision had to be matched back to its question. <b>This is the convention most worth keeping.</b>"],
+     src:"specs/001-gridsweep-retro.md, What went well"},
+    {t:"note", body:"&ldquo;Use the fallback&rdquo; is still a decision, and the file records that a human made it. <b>A blank answer is unresolved, not agreed</b> &mdash; the skill will not fold a fallback nobody accepted."}
+  ],
+  notes: "Thirty lines of human writing, the cheapest part of the run and the part that decides everything after it. The diff for this turn is worth showing: it is entirely the developer's words, sitting under the agent's questions."
+},
+{
+  n: "03", sha: "8df5722", title: "fold-questions", actor: "ai", skill: "fold-questions", game: null,
+  prompt: "Use the human-gated-spec-driven-ai-development skill to fold-questions from 001-gridsweep-questions-01.md into 001-gridsweep-spec.md",
+  think: [
+    "Reading every > Decision: block in the questions artifact",
+    "Checking each question has an explicit answer - 15 of 15",
+    "Rewriting the spec so the decisions read as requirements",
+    "Marking the questions artifact folded"
+  ],
+  tools: [
+    {k:"read", v:"<b>specs/001-gridsweep-questions-01.md</b> <i>&middot; 15 decisions</i>"},
+    {k:"read", v:"<b>specs/001-gridsweep-spec.md</b>"},
+    {k:"edit", v:"<b>specs/001-gridsweep-spec.md</b> <i>&middot; +93 &minus;8</i>"},
+    {k:"edit", v:"<b>specs/001-gridsweep-questions-01.md</b> <i>&middot; folded</i>"},
+    {k:"edit", v:"<b>prompts.md</b>"}
+  ],
+  files: [
+    {p:"specs/001-gridsweep-spec.md", k:"M", a:93, d:8},
+    {p:"specs/001-gridsweep-questions-01.md", k:"M", a:3, d:0},
+    {p:"prompts.md", k:"M", a:7, d:1}
+  ],
+  say: "Every decision is now a line in the spec. <strong>49 lines &rarr; 134.</strong> The questions file stays in the repo as the record of who decided what, and why.",
+  panels: [
+    {t:"kv", h:"THE SPEC, BEFORE AND AFTER", rows:[
+      ["Lines in the spec", "49 &rarr; 134", "hi"],
+      ["Acceptance criteria", "5 &rarr; 8", "hi"],
+      ["Win condition", "defined", "hi"],
+      ["Questions still open", "0", ""]
+    ]},
+    {t:"quote", h:"ONE PROMPT WRITTEN, TWELVE SESSIONS RUN",
+     body:["Watch how each agent turn ends. <b>It writes the next prompt</b>, into the <code>## User gate</code> section of the artifact it just produced &mdash; and the prompt box at the top of the next turn is that text, pasted in. <b>The developer wrote exactly one prompt from nothing:</b> turn 01.",
+           "And each of those turns ran in <b>a fresh session with the context cleared</b>. Nothing carried over in the conversation, because nothing needed to: the spec, the plan and its checklist state are on disk. <b>The retro counts twelve sessions across the run &mdash; one for each of the twelve turns with an agent in it.</b>",
+           "That is the whole bet of the workflow. Chat is disposable; the artifacts are not."],
+     src:"specs/001-gridsweep-questions-01.md, User gate \u00b7 and specs/001-gridsweep-retro.md, Time"},
+    {t:"note", body:"This is the last turn at which changing your mind is free. From here the spec is the only artifact the plan reads, and <b>nothing downstream ever opens the questions file again</b> &mdash; it survives as the record of who decided what."}
+  ],
+  next: {
+    where: "in its closing reply only",
+    options: [{taken:true, text:"Use the human-gated-spec-driven-ai-development skill to generate-plan for 001-gridsweep-spec.md"}],
+    note: "<b>The one handover in the run that was not written to a file.</b> The folded spec is the only artifact with no <code>## User gate</code>, so this suggestion lived in the transcript &mdash; exactly the thing this workflow treats as disposable."
+  },
+  notes: "Two things to draw out here. The agent edits the spec, but only with answers a human wrote - it never resolves its own question. And scroll back one turn to the green SUGGESTED NEXT STEP block: the amber prompt at the top of this turn is that text, pasted into an empty session. Ask the room how many prompts they think were written by hand in the whole run. The answer is one, so far, and three more at the very end."
+},
+{
+  n: "04", sha: "d1b7a4d", title: "generate-plan", actor: "ai", skill: "generate-plan", game: null,
+  prompt: "Use the human-gated-spec-driven-ai-development skill to generate-plan for 001-gridsweep-spec.md",
+  think: [
+    "Reading the folded spec - 8 acceptance criteria",
+    "Computing adjacency counts and cascade sizes from the fixed layout",
+    "Cutting the work into phases that each end green and reviewable",
+    "Writing tasks, acceptance criteria, out-of-scope and risks per phase"
+  ],
+  tools: [
+    {k:"read",  v:"<b>specs/001-gridsweep-spec.md</b> <i>&middot; 134 lines</i>"},
+    {k:"think", v:"derive fixtures from the layout, not from code that does not exist yet"},
+    {k:"write", v:"<b>specs/001-gridsweep-plan.md</b> <i>&middot; 273 lines, 5 phases</i>"},
+    {k:"edit",  v:"<b>prompts.md</b>"}
+  ],
+  files: [
+    {p:"specs/001-gridsweep-plan.md", k:"A", a:273, d:0},
+    {p:"prompts.md", k:"M", a:7, d:1}
+  ],
+  say: "Five phases, each independently reviewable and each ending on a green suite. It opens with the adjacency counts computed from the fixed layout, <strong>so the tests have expectations derived independently of the implementation.</strong>",
+  gate: {h:"HUMAN GATE &middot; PLAN APPROVAL", b:"Read and approved by hand before a single line of code exists. No implementation runs until this gate clears."},
+  panels: [
+    {t:"list", h:"THE PLAN", items:[
+      "<b>Phase 01</b> &mdash; Dual-load skeleton and board construction",
+      "<b>Phase 02</b> &mdash; Reveal, marking, cascade, and end states",
+      "<b>Phase 03</b> &mdash; Grid rendering and accessibility structure",
+      "<b>Phase 04</b> &mdash; Input, new game, and status wiring",
+      "<b>Phase 05</b> &mdash; End-state presentation and acceptance sweep"
+    ]},
+    {t:"quote", h:"WHY THAT ORDER",
+     body:["Phase order front-loads the dual-load risk (Phase 01) and the full rule set (Phase 02) so the UI phases build on settled behaviour.",
+           "The only automated coverage is over <code>board.js</code>; <code>ui.js</code> is verified by hand in the browser at the end of Phases 03, 04, and 05."],
+     src:"specs/001-gridsweep-plan.md, Handoff notes"},
+    {t:"note", body:"That second line is the plan admitting a hole in itself on the day it was written. <b>It becomes debt item 1, and it takes two more turns and $10.70 to close.</b>"}
+  ],
+  next: {
+    where: "written into specs/001-gridsweep-plan.md \u00b7 User gate \u2192 &ldquo;Next stage if approved&rdquo;",
+    options: [{taken:true, text:"Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-gridsweep-plan.md"}],
+    note: "The plan rewrites this same gate after every phase, which is why one prompt runs all five of them."
+  },
+  hold: 2400,
+  notes: "The pause here is the point of the whole workflow. Four turns, zero code, and the expensive disagreements have already happened in a text file that costs nothing to change. Good place to stop and take questions."
+},
+{
+  n: "05", sha: "2350a33", title: "implement-next-phase &middot; Phase 01", actor: "ai",
+  skill: "implement-next-phase", game: "2350a33", gameKind: "stub",
+  prompt: "Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-gridsweep-plan.md",
+  think: [
+    "Finding the first incomplete phase - Phase 01",
+    "Red: writing failing tests for board construction and the dual-load contract",
+    "Green: implementing board.js until they pass",
+    "Recording evidence against Phase 01's acceptance criteria"
+  ],
+  tools: [
+    {k:"read",  v:"<b>specs/001-gridsweep-plan.md</b> <i>&middot; Phase 01 selected, 02-05 refused</i>"},
+    {k:"write", v:"<b>test/board.test.js</b> <i>&middot; red</i>"},
+    {k:"write", v:"<b>board.js</b>, <b>index.html</b>"},
+    {k:"run",   v:"node --test <i>&middot; pass 7 / fail 0</i>", ok:true},
+    {k:"edit",  v:"<b>specs/001-gridsweep-plan.md</b> <i>&middot; tasks checked, evidence recorded</i>"}
+  ],
+  files: [
+    {p:"board.js", k:"A", a:108, d:0},
+    {p:"index.html", k:"A", a:30, d:0},
+    {p:"test/board.test.js", k:"A", a:119, d:0},
+    {p:"specs/001-gridsweep-plan.md", k:"M", a:52, d:12},
+    {p:"prompts.md", k:"M", a:6, d:1}
+  ],
+  say: "First code. <code>board.js</code> is pure logic with no DOM; the stub page exists only to prove the file loads as a classic script over <code>file://</code>. Seven tests, green.",
+  panels: [
+    {t:"term", body:"<span class='cmd'>node --test</span>\n<span class='pass'>&#8470; tests 7 &nbsp;pass 7 &nbsp;fail 0</span>\n<span class='zero'>exit 0</span>"},
+    {t:"quote", h:"THE PLAN ARGUING WITH ITSELF, IN ITS OWN EVIDENCE",
+     body:["<b>Deviation from the plan text, deliberate:</b> the layout is stored in <code>board.js</code> as an array of eight 8-character strings rather than the spec's spaced grid, which is the same data in a form the code can index directly. Mine placement is asserted against the spec's coordinates, <b>so the two representations are held equal by test.</b>"],
+     src:"specs/001-gridsweep-plan.md, Phase 01 evidence"},
+    {t:"shot", h:"THE PAGE AT THIS COMMIT", img:"01-stub.png", cap:"Phase 01 ships a dual-load check, not a game — it prints the computed adjacency grid to prove the logic loaded."}
+  ],
+  next: {
+    where: "written into specs/001-gridsweep-plan.md \u00b7 User gate \u2192 &ldquo;Next stage if approved&rdquo;",
+    options: [{taken:true, text:"Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-gridsweep-plan.md"}],
+    note: "Character for character the same prompt as the last turn, and as the next three. The plan advanced itself; the conversation did not have to."
+  },
+  notes: "Two things. Phase one produces something nobody would call a game - that is what a bounded phase looks like. And the phase reports its own deviation rather than quietly complying: the retro names that habit as the thing that made the final review fast."
+},
+{
+  n: "06", sha: "9d694e8", title: "implement-next-phase &middot; Phase 02", actor: "ai",
+  skill: "implement-next-phase", game: "2350a33", gameKind: "stub",
+  prompt: "Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-gridsweep-plan.md",
+  think: [
+    "Phase 01 complete - advancing to Phase 02",
+    "Red: cascade, marking, win and loss, from the fixtures in the plan",
+    "Green: reveal, mark, cascade and the end-state machine",
+    "Re-running the whole suite, not just the new tests"
+  ],
+  tools: [
+    {k:"read", v:"<b>specs/001-gridsweep-plan.md</b> <i>&middot; Phase 02</i>"},
+    {k:"edit", v:"<b>test/board.test.js</b> <i>&middot; +261, red</i>"},
+    {k:"edit", v:"<b>board.js</b> <i>&middot; reveal, mark, cascade, status</i>"},
+    {k:"run",  v:"node --test <i>&middot; pass 27 / fail 0</i>", ok:true},
+    {k:"edit", v:"<b>specs/001-gridsweep-plan.md</b>"}
+  ],
+  files: [
+    {p:"board.js", k:"M", a:103, d:1},
+    {p:"test/board.test.js", k:"M", a:261, d:0},
+    {p:"specs/001-gridsweep-plan.md", k:"M", a:69, d:16},
+    {p:"prompts.md", k:"M", a:8, d:1}
+  ],
+  say: "The entire game now works &mdash; and is completely invisible. <strong>Nothing on screen changed</strong>, because Phase 02 is rules only. Twenty more tests say it is right.",
+  panels: [
+    {t:"quote", h:"WHAT RED ACTUALLY LOOKED LIKE",
+     body:["<b>Red:</b> the 20 new tests were appended and run first; every one failed with <code>TypeError: game.reveal is not a function</code> / <code>game.toggleMark is not a function</code>, because <code>createGame()</code> still returned only <code>snapshot</code>.",
+           "<b>Green:</b> <code>node --test</code> reports <code>pass 27 / fail 0</code> and exits <code>0</code> (7 Phase 01 tests plus the 20 new ones)."],
+     src:"specs/001-gridsweep-plan.md, Phase 02 evidence"},
+    {t:"note", body:"The plan records the failure message, not just &ldquo;tests written first&rdquo;. <b>That is the difference between claiming red/green and evidencing it</b> &mdash; and it is the thing a reviewer six months later can actually check."},
+    {t:"note", body:"The win condition from question 1 is now a predicate in <b>board.js</b> with tests asserting it. Trace it back: <b>agent asked &rarr; human decided &rarr; spec recorded &rarr; plan scheduled &rarr; test proves.</b>"}
+  ],
+  next: {
+    where: "written into specs/001-gridsweep-plan.md \u00b7 User gate \u2192 &ldquo;Next stage if approved&rdquo;, rewritten for this phase",
+    options: [{taken:true, text:"Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-gridsweep-plan.md"}]
+  },
+  notes: "Open 'What changed' and scroll to board.js: the win predicate is right there, and it ignores flags because question 2 said so. Then ask the room how they would find that out six months later on a normal project."
+},
+{
+  n: "07", sha: "cd7f7e8", title: "implement-next-phase &middot; Phase 03", actor: "ai",
+  skill: "implement-next-phase", game: "cd7f7e8", gameKind: "inert",
+  prompt: "Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-gridsweep-plan.md",
+  think: [
+    "Phase 03 - grid rendering and accessibility structure",
+    "role=grid, one row per line, roving tabindex, aria-label per cell",
+    "ui.js reads a snapshot and paints it - no game rules in the DOM layer",
+    "Guard tests: ui.js must never be loadable by the Node suite"
+  ],
+  tools: [
+    {k:"read",  v:"<b>specs/001-gridsweep-plan.md</b> <i>&middot; Phase 03</i>"},
+    {k:"write", v:"<b>ui.js</b> <i>&middot; 153 lines, DOM only</i>"},
+    {k:"write", v:"<b>styles.css</b> <i>&middot; 137 lines</i>"},
+    {k:"edit",  v:"<b>index.html</b> <i>&middot; +34 &minus;27, stub replaced by the real page</i>"},
+    {k:"run",   v:"node --test <i>&middot; pass 32 / fail 0</i>", ok:true}
+  ],
+  files: [
+    {p:"ui.js", k:"A", a:153, d:0},
+    {p:"styles.css", k:"A", a:137, d:0},
+    {p:"index.html", k:"M", a:34, d:27},
+    {p:"test/board.test.js", k:"M", a:80, d:0},
+    {p:"specs/001-gridsweep-plan.md", k:"M", a:108, d:23},
+    {p:"prompts.md", k:"M", a:7, d:1}
+  ],
+  say: "A board you can look at. <strong>Not one you can touch</strong> &mdash; input is Phase 04, and the plan is explicit that rendering lands before it.",
+  panels: [
+    {t:"shot", h:"THE PAGE AT THIS COMMIT", img:"03-grid.png", cap:"Sixty-four cells, a mine counter, a status line and a New game button — all inert. Open “Play the game” and click one."},
+    {t:"note", body:"<b>board.js</b> still has no idea the DOM exists, and <b>ui.js</b> still has no idea what the rules are. That split was a spec decision, made at question 3, and the final review will call it the strongest piece of design in the project."},
+    {t:"note", kind:"miss", body:"Note where the <b>New game</b> button landed: in the HUD, above the grid, next to the counter. It went there because that is where the counter was. <b>The spec said the button exists and what it does. It never said where.</b> Nothing in the next ten turns questions it."}
+  ],
+  next: {
+    where: "written into specs/001-gridsweep-plan.md \u00b7 User gate \u2192 &ldquo;Next stage if approved&rdquo;, rewritten for this phase",
+    options: [{taken:true, text:"Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-gridsweep-plan.md"}]
+  },
+  notes: "Open 'Play the game' and click a cell in front of the room. Nothing happens, and that is correct: the phase boundary is real, not a slide. Then point at the New game button - it is one of the two things the whole process fails to catch."
+},
+{
+  n: "08", sha: "126811e", title: "implement-next-phase &middot; Phase 04", actor: "ai",
+  skill: "implement-next-phase", game: "126811e", gameKind: "live",
+  prompt: "Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-gridsweep-plan.md",
+  think: [
+    "Phase 04 - input, new game, and status wiring",
+    "Arrow keys move a roving tabindex; Enter or Space reveals; F marks",
+    "Left click reveals, right click marks, contextmenu suppressed on the board",
+    "New game resets the board without a page reload"
+  ],
+  tools: [
+    {k:"read", v:"<b>specs/001-gridsweep-plan.md</b> <i>&middot; Phase 04</i>"},
+    {k:"edit", v:"<b>test/board.test.js</b> <i>&middot; +108, red</i>"},
+    {k:"edit", v:"<b>ui.js</b> <i>&middot; +103 &minus;3, keyboard and pointer</i>"},
+    {k:"run",  v:"node --test <i>&middot; pass 37 / fail 0</i>", ok:true},
+    {k:"edit", v:"<b>specs/001-gridsweep-plan.md</b>"}
+  ],
+  files: [
+    {p:"ui.js", k:"M", a:103, d:3},
+    {p:"test/board.test.js", k:"M", a:108, d:0},
+    {p:"specs/001-gridsweep-plan.md", k:"M", a:141, d:33},
+    {p:"prompts.md", k:"M", a:7, d:1}
+  ],
+  say: "Playable. Cascades open, marks stick, the counter counts down. <strong>Nothing anywhere on the page says which keys do any of that</strong> &mdash; and no test can tell.",
+  panels: [
+    {t:"film", h:"THE GAME AT THIS COMMIT", frames:["04-1.png","04-2.png","04-3.png","04-4.png","04-5.png","04-6.png"],
+     cap:"Six real captures of commit 126811e being played: cursor placed, corner revealed, cascade opens, two cells marked, two more revealed."},
+    {t:"note", kind:"miss", body:"Acceptance criterion 7 &mdash; <b>&ldquo;the game is fully playable using only the keyboard&rdquo;</b> &mdash; is satisfied here, honestly and literally. A first-time player still cannot play it."},
+    {t:"quote", h:"THE RETRO, ON WHY NOTHING COULD CATCH THAT",
+     body:["Every acceptance criterion has the shape <b>&ldquo;given this input, this happens&rdquo;</b>. None has the shape <b>&ldquo;a player can find out what the inputs are&rdquo;</b>.",
+           "A criterion can be satisfied and still not mean what it appears to promise."],
+     src:"specs/001-gridsweep-retro.md, What the process missed"}
+  ],
+  next: {
+    where: "written into specs/001-gridsweep-plan.md \u00b7 User gate \u2192 &ldquo;Next stage if approved&rdquo;, rewritten for this phase",
+    options: [{taken:true, text:"Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-gridsweep-plan.md"}]
+  },
+  notes: "Stop here and hand the keyboard to someone who has not seen the spec. They will not know that F marks a cell, because nothing on the page says so. This is the strongest single moment in the deck."
+},
+{
+  n: "09", sha: "8dfa7b5", title: "implement-next-phase &middot; Phase 05", actor: "ai",
+  skill: "implement-next-phase", game: "8dfa7b5", gameKind: "live",
+  prompt: "Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-gridsweep-plan.md",
+  think: [
+    "Phase 05 - end-state presentation and the acceptance sweep",
+    "On loss: open the board, single out the mine that was hit, cross the wrong marks",
+    "On win: lock the board, show every mine, say so in the status line",
+    "Walking all eight acceptance criteria one at a time and recording evidence"
+  ],
+  tools: [
+    {k:"edit", v:"<b>ui.js</b> <i>&middot; +96 &minus;36, end-state rendering</i>"},
+    {k:"edit", v:"<b>styles.css</b> <i>&middot; +25, exploded and wrong-mark faces</i>"},
+    {k:"edit", v:"<b>test/board.test.js</b> <i>&middot; +152, acceptance sweep</i>"},
+    {k:"run",  v:"node --test <i>&middot; tests 42 / pass 42 / fail 0</i>", ok:true},
+    {k:"edit", v:"<b>specs/001-gridsweep-plan.md</b> <i>&middot; all 5 phases complete</i>"}
+  ],
+  files: [
+    {p:"ui.js", k:"M", a:96, d:36},
+    {p:"styles.css", k:"M", a:25, d:0},
+    {p:"test/board.test.js", k:"M", a:152, d:0},
+    {p:"specs/001-gridsweep-plan.md", k:"M", a:160, d:38},
+    {p:"prompts.md", k:"M", a:7, d:1}
+  ],
+  say: "The plan is finished. Eight acceptance criteria walked one at a time, forty-two tests green. <strong>The same prompt ran all five phases</strong> &mdash; the skill advances on its own and refuses to run ahead.",
+  panels: [
+    {t:"film", h:"LOSING, IN THREE FRAMES", frames:["05-lose-1.png","05-lose-2.png","05-lose-3.png"],
+     cap:"Mid-game, cursor moved onto a hidden mine, and the board opening: the mine that was hit in red, the rest pale, a wrong mark crossed out."},
+    {t:"shot", h:"AND WINNING", img:"05-win.png", cap:"All 54 safe cells revealed. The board locks and every remaining mine shows."},
+    {t:"quote", h:"WHERE THE PHASE REFUSED ITS OWN PLAN",
+     body:["<b>Deviation from the plan text, and worth your attention:</b> the plan asked for a win test &ldquo;with all ten marks placed on safe cells&rdquo;. <b>That state cannot exist at win time</b>, because winning requires all 54 safe cells revealed and a cell can never be both revealed and marked.",
+           "The rule the spec actually means &mdash; the win check never consults marks &mdash; is covered by three tests instead."],
+     src:"specs/001-gridsweep-plan.md, Phase 05 evidence"}
+  ],
+  next: {
+    where: "written into specs/001-gridsweep-plan.md \u00b7 User gate",
+    options: [
+      {text:"Use the human-gated-spec-driven-ai-development skill to review-phase for 001-gridsweep-plan.md",
+       tag:"OFFERED, NOT TAKEN \u00b7 review-phase never ran in this project"},
+      {taken:true, text:"Use the human-gated-spec-driven-ai-development skill to final-review for 001-gridsweep-plan.md"}
+    ],
+    note: "Two options, because Phase 05 was the last one. <code>review-phase</code> is one of the seven stage commands and this run never used it &mdash; each phase's acceptance walk stood in for it."
+  },
+  hold: 2600,
+  notes: "Two points. The phase prompt never changed across five turns - the state lives in the plan file, not the conversation. And the plan asked for an impossible test; the phase did not write it and said why. An agent that had quietly written something green instead is the failure mode this evidence trail exists to catch."
+},
+{
+  n: "10", sha: "187fcd9", title: "final-review", actor: "ai", skill: "final-review",
+  game: "8dfa7b5", gameKind: "live",
+  prompt: "Use the human-gated-spec-driven-ai-development skill to final-review for 001-gridsweep-plan.md",
+  think: [
+    "Re-reading the spec, the plan, and every line of shipped code",
+    "Checking all eight acceptance criteria against the implementation",
+    "Assessing architecture, then looking for what should not have shipped",
+    "Writing a technical debt register with owners and costs"
+  ],
+  tools: [
+    {k:"read",  v:"<b>board.js</b>, <b>ui.js</b>, <b>styles.css</b>, <b>index.html</b>"},
+    {k:"read",  v:"<b>test/board.test.js</b> <i>&middot; 42 tests</i>"},
+    {k:"run",   v:"node --test <i>&middot; pass 42 / fail 0</i>", ok:true},
+    {k:"write", v:"<b>specs/001-gridsweep-final-review.md</b> <i>&middot; 240 lines</i>"},
+    {k:"edit",  v:"<b>specs/001-gridsweep-plan.md</b>"}
+  ],
+  files: [
+    {p:"specs/001-gridsweep-final-review.md", k:"A", a:240, d:0},
+    {p:"specs/001-gridsweep-plan.md", k:"M", a:14, d:0},
+    {p:"prompts.md", k:"M", a:7, d:1}
+  ],
+  say: "Recommendation: <strong>go</strong>. No must-fix issues. Two important improvements, a handful of cleanups, and a four-item debt register &mdash; <strong>including the agent turning in its own dead code.</strong>",
+  gate: {h:"HUMAN GATE &middot; TRIAGE", b:"Findings answered inline in the review file, by hand, before any of them were acted on. The agent does not get to decide which of its own findings matter."},
+  panels: [
+    {t:"quote", h:"THE VERDICT, IN ITS OWN WORDS",
+     body:["The implementation matches the spec. Every acceptance criterion holds, the board logic is genuinely DOM-free, the delivery constraints are enforced by tests rather than by memory, and <b>the plan's evidence trail is unusually honest &mdash; including two deviations it flags against itself</b>.",
+           "Nothing blocks acceptance. What follows is <b>one piece of dead code, one real piece of test debt, and a short list of cleanups</b>."],
+     src:"specs/001-gridsweep-final-review.md, Executive summary"},
+    {t:"list", h:"WHAT IT FOUND", items:[
+      "<b>Critical issues</b> &mdash; none",
+      "<b>Imp. 1</b> &mdash; <code>GridsweepUI</code> is dead code that publishes the live game object",
+      "<b>Imp. 2</b> &mdash; 15 of 42 tests assert regexes over source text, not behaviour",
+      "<b>Debt register</b> &mdash; 4 items, 2 of them caused by the no-dependencies rule",
+      "<b>Verdict</b> &mdash; go"
+    ]},
+    {t:"note", body:"Imp. 1 is a debug hook the agent added in Phase 04 and then flagged in Phase 05, and its own comment for it turned out to contradict the Phase 05 evidence. <b>The review is adversarial about the reviewer's own work</b>, which is why it is a separate turn and not a paragraph at the end of a phase."}
+  ],
+  next: {
+    where: "written into specs/001-gridsweep-final-review.md \u00b7 User gate \u2192 &ldquo;Example prompts&rdquo;",
+    options: [
+      {taken:true, text:"Use the human-gated-spec-driven-ai-development skill to make a bounded improvement pass for 001-gridsweep-plan.md covering the Important improvements and Cleanup opportunities in 001-gridsweep-final-review.md"},
+      {text:"Use the human-gated-spec-driven-ai-development skill to review-spec for specs/002-spec.md"}
+    ],
+    note: "<b>The last handover in the run.</b> Everything after the next turn, the developer writes."
+  },
+  notes: "No code changed this turn - 'Play the game' still shows Phase 05. The point is the 240 lines: the agent arguing with itself, in a file the human is about to annotate. Do not advance until the room has seen that it found its own dead code. If anyone is counting stage commands: this run used five of the skill's seven. `generate-questions` was not needed because `review-spec` produced the questions artifact directly, and `review-phase` was folded into the acceptance walk at the end of each phase - defensible on a project this size, and the first thing to add back on a real one."
+},
+{
+  n: "11", sha: "425d2b7", title: "Improvement pass 01", actor: "ai",
+  freeform: "bounded improvement cycle", game: "425d2b7", gameKind: "live",
+  pre: "The developer opens <em>001-gridsweep-final-review.md</em> and answers it in place &mdash; a <em>&gt; Decision:</em> under every finding and every debt item, including two that say <em>not now</em>. Nothing runs until that is done.",
+  prompt: "Use the human-gated-spec-driven-ai-development skill to make a bounded improvement pass for 001-gridsweep-plan.md covering the Important improvements and Cleanup opportunities in 001-gridsweep-final-review.md",
+  think: [
+    "Reading the triaged review - scope is the accepted findings, nothing else",
+    "Removing the GridsweepUI debug hook and its last caller",
+    "Replacing source-order dependence in the CSS with explicit specificity",
+    "Re-aiming the brittle guard tests, keeping the ones that guard delivery"
+  ],
+  tools: [
+    {k:"read", v:"<b>specs/001-gridsweep-final-review.md</b> <i>&middot; human decisions attached</i>"},
+    {k:"edit", v:"<b>ui.js</b> <i>&middot; &minus;10, GridsweepUI removed</i>"},
+    {k:"edit", v:"<b>board.js</b> <i>&middot; +28 &minus;22</i>"},
+    {k:"edit", v:"<b>styles.css</b> <i>&middot; +6 &minus;5</i>"},
+    {k:"run",  v:"node --test <i>&middot; tests 43 / pass 43 / fail 0</i>", ok:true}
+  ],
+  files: [
+    {p:"board.js", k:"M", a:28, d:22},
+    {p:"ui.js", k:"M", a:7, d:10},
+    {p:"styles.css", k:"M", a:6, d:5},
+    {p:"test/board.test.js", k:"M", a:143, d:126},
+    {p:"specs/001-gridsweep-final-review.md", k:"M", a:57, d:0},
+    {p:"specs/001-gridsweep-plan.md", k:"M", a:139, d:0},
+    {p:"prompts.md", k:"M", a:6, d:1}
+  ],
+  say: "Eight findings closed, and <strong>not one pixel moved</strong> &mdash; every change was internal. But the pass stopped exactly at its brief: <strong>two debt items it was not scoped for are still open</strong>, and it says so in writing.",
+  hold: 1600,
+  panels: [
+    {t:"human", h:"THE DEVELOPER'S TRIAGE, WRITTEN INTO THE REVIEW",
+     items:[
+       {q:"Imp. 1 — dead GridsweepUI global", d:"Delete the unneeded scaffolding."},
+       {q:"Imp. 2 — a third of the suite tests source text", d:"Narrow the scripts focusing on not allowing tests to stay green while renderer is completely broken. Implement the suggestions above."},
+       {q:"Debt 1 — no automated coverage of renderer behaviour", d:"promote the driver into the repo.", defer:true},
+       {q:"Debt 3 — criterion 6 has two readings", d:"Close in spec with code as source of truth.", defer:true},
+       {q:"Debt 4 — manual verification artifacts are gone", d:"We can regenerate screenshots and CDP driver if needed. This is ok for demo."}
+     ],
+     src:"specs/001-gridsweep-final-review.md, answered inline before this pass ran"},
+    {t:"list", h:"WHAT THE PASS ACTUALLY CLOSED", items:[
+      "<b>8 done</b> &mdash; dead global, grep tests re-aimed, export narrowed, duplicate neighbour walk, CSS specificity, test helpers, cursor clamping",
+      "<b>Debt 1</b> &mdash; promote the browser driver &middot; <b>not done, out of the pass's scope</b>",
+      "<b>Debt 3</b> &mdash; close criterion 6 in the spec &middot; <b>not done, out of the pass's scope</b>",
+      "<b>Debt 4</b> &mdash; no action, as decided"
+    ]},
+    {t:"note", kind:"miss", body:"A bounded pass will not quietly widen to finish the job, <b>even when the developer's own decision above says to do the thing.</b> Getting those two closed took a second prompt that named them &mdash; which is the next turn."},
+    {t:"quote", h:"WHY THIS TURN HAS NO STAGE NAME",
+     body:["The skill has <b>seven stage commands</b> &mdash; <code>review-spec</code>, <code>generate-questions</code>, <code>fold-questions</code>, <code>generate-plan</code>, <code>implement-next-phase</code>, <code>review-phase</code>, <code>final-review</code>. <b>This is none of them.</b>",
+           "&ldquo;If the user wants changes after the final review, treat that as <b>a new bounded improvement cycle</b> grounded in the same approved spec and plan.&rdquo;",
+           "So the prompt is a plain request that the skill maps onto the artifacts it already has. The same is true of the retro two turns from now: <b>there is no retro command.</b>"],
+     src:"skills/human-gated-spec-driven-ai-development/SKILL.md"}
+  ],
+  next: {none: "The pass records that debt items 1 and 3 are &ldquo;the natural next pass&rdquo; &mdash; but it writes no prompt for them. <b>From here the developer is composing the prompts again.</b>"},
+  notes: "This is the turn to slow down on. The right panel is the human half of the loop: findings answered where they were written, two of them deferred on purpose. Then show that the pass honoured the deferral rather than helpfully overreaching - and that this cost a whole extra turn. Two things to name: the header chip is amber, so this is not a stage command; and this prompt was still handed over, verbatim, by the previous turn. It is the last one. Scroll to the end of this turn and the handover block is gone."
+},
+{
+  n: "12", sha: "ce6e028", title: "Improvement pass 02", actor: "ai",
+  freeform: "bounded improvement cycle", game: "ce6e028", gameKind: "live",
+  pre: "Pass 01 left debt items 1 and 3 open by name. Closing them needs a second prompt that <em>names them</em> &mdash; and adds the constraint the first pass would otherwise have had to guess.",
+  prompt: "Use the human-gated-spec-driven-ai-development skill to make a bounded improvement pass for 001-gridsweep-plan.md covering technical debt items 1 and 3 in 001-gridsweep-final-review.md\n\nItem 1 must not add npm packages or break `node --test` where Chrome is absent.",
+  psrc: {own:true, why:"turn 11 said only &ldquo;the natural next pass&rdquo;. Naming the two items, and the npm constraint, is the developer's"},
+  think: [
+    "Scope is exactly two named debt items - the pass may not widen",
+    "Item 1 needs renderer coverage, and the spec forbids installing Playwright",
+    "Writing a Chrome DevTools Protocol client from Node built-ins",
+    "Mutation-testing the new suite: what could break before, and what breaks now"
+  ],
+  tools: [
+    {k:"write", v:"<b>tools/chrome-driver.js</b> <i>&middot; 416 lines, zero dependencies</i>"},
+    {k:"write", v:"<b>test/browser.test.js</b> <i>&middot; 408 lines, real key and mouse events</i>"},
+    {k:"edit",  v:"<b>specs/001-gridsweep-spec.md</b> <i>&middot; +19 &minus;3, criterion 6 closed</i>"},
+    {k:"run",   v:"13 renderer mutations on scratch copies"},
+    {k:"run",   v:"node --test <i>&middot; tests 54 / pass 54 / fail 0, ~2.3s</i>", ok:true}
+  ],
+  files: [
+    {p:"tools/chrome-driver.js", k:"A", a:416, d:0},
+    {p:"test/browser.test.js", k:"A", a:408, d:0},
+    {p:"test/board.test.js", k:"M", a:57, d:4},
+    {p:"specs/001-gridsweep-spec.md", k:"M", a:19, d:3},
+    {p:"specs/001-gridsweep-final-review.md", k:"M", a:40, d:0},
+    {p:"specs/001-gridsweep-plan.md", k:"M", a:165, d:0},
+    {p:"prompts.md", k:"M", a:14, d:1}
+  ],
+  say: "The debt register closes. It cost <strong>824 lines of hand-written test infrastructure</strong> to do what a dependency would have done in ten lines of config &mdash; and it was <strong>the single most expensive turn in the project.</strong>",
+  panels: [
+    {t:"quote", h:"THE DEBT IS PAID, NOT JUST ADDRESSED",
+     body:["Of thirteen renderer mutations tried on scratch copies, <b>eleven were invisible to the old suite and all thirteen are caught now</b> &mdash; a board that draws nothing, a flag that does not appear, a status line that stays empty, a cursor that wraps, labels that stop describing cells, a context menu that opens.",
+           "<b>No shipped file changed.</b> <code>board.js</code>, <code>ui.js</code>, <code>styles.css</code> and <code>index.html</code> are byte-for-byte what pass 01 left, which is what makes the mutation table meaningful."],
+     src:"specs/001-gridsweep-final-review.md, Improvement pass 02"},
+    {t:"kv", h:"WHAT IT COST", rows:[
+      ["tools/chrome-driver.js", "416 lines", "warnv"],
+      ["test/browser.test.js", "408 lines", "warnv"],
+      ["Playwright equivalent", "~10 lines", "hi"],
+      ["This turn, at API rates", "≈$10.70", "warnv"],
+      ["Everything after the review", "44% of spend", "warnv"],
+      ["Tests, end of cycle", "54 · all green", "hi"]
+    ]},
+    {t:"quote", h:"AND THE PASSES HELD THEIR EDGES",
+     body:["<b>Bounded passes with explicit out-of-scope lists.</b> Pass 01 deferred debt items 1 and 3 by name and did not drift into them. Pass 02 picked up exactly those two. <b>Neither pass expanded.</b>"],
+     src:"specs/001-gridsweep-retro.md, What went well"},
+    {t:"note", body:"The retro argues the constraint was <b>half right</b>: the delivery constraint (no build, no install, opens over <code>file://</code>) was correct and still holds. The <b>therefore no dev dependencies</b> that got smuggled in behind it never justified itself &mdash; and test tooling never ships."}
+  ],
+  next: {none: "Nothing. The pass reports the debt register closed and stops."},
+  notes: "The most expensive turn in the project, and the one that best shows the trade-off. Note the amber line under the prompt: the chain of handed-over prompts ended with turn 11, and this one is the developer's, naming the two items and adding the npm constraint that pass 01 would otherwise have had to guess. Then land the mutation table - it is what turns 'we added tests' into evidence - and the fact that the process faithfully executed a decision the retro then argues was wrong. Gates enforce decisions; they do not make them good."
+},
+{
+  n: "13", sha: "ac5be2e", title: "The retro &middot; three prompts, one commit", actor: "ai", freeform: "plain request",
+  sessionNote: "the one turn that is a conversation \u2014 three prompts, no reset between them",
+  game: "ce6e028", gameKind: "live",
+  cycles: [
+    {
+      prompt: "Write a retro of the demo project in specs/001-gridsweep-retro.md .  Include the information on what you suggest above.  Also evaluate if doing things without a package.json and using some standard tools and layout for development was better than doing things a standard way.  I thought the project would be stimpler than it was but we had to make tools and other things a normal \"compiled\" project wouldn't have.\n\nAdditionally I had noticed the following issues captured by a prompt you should not run now but the issues should be included in a retro. […a 002 review-spec prompt for a visible keyboard legend and moving the New game button below the grid…]",
+      psrc: {own:true, why:"nothing suggested a retro \u2014 there is no retro stage, and the review's other example prompt was for a 002 cycle"},
+      think: [
+        "Counting shipped lines against test and tooling lines",
+        "Arguing the no-package.json constraint both ways",
+        "Writing down what the process structurally could not catch"
+      ],
+      tools: [
+        {k:"read",  v:"every artifact in <b>specs/</b> and every source file"},
+        {k:"run",   v:"line counts across shipped, test, tooling and spec"},
+        {k:"write", v:"<b>specs/001-gridsweep-retro.md</b> <i>&middot; draft</i>"}
+      ],
+      say: "Written &mdash; including the two defects the developer found by playing it, which no stage of the process could have."
+    },
+    {
+      prompt: "Is there a way to determine how much time claude spent yesterday and today on gridsweep and how many tokens were spent plus their cost if it was paid on the API and not through subscription?",
+      psrc: {own:true, why:"a question about the run itself, not about the code"},
+      think: [
+        "Reading the local session transcripts for per-request token usage",
+        "Merging twelve sessions onto one timeline, cutting on idle gaps",
+        "Pricing the totals at published API rates"
+      ],
+      tools: [
+        {k:"read", v:"~/.claude/projects/-Users-res-gridsweep-demo/ <i>&middot; 568 requests</i>"},
+        {k:"run",  v:"token totals by day and model <i>&middot; 49.7M tokens</i>"}
+      ],
+      say: "<strong>49.7M tokens, $66.78 at API rates</strong> &mdash; and about $201 saved by prompt caching, because 46.7M of those tokens were cache reads."
+    },
+    {
+      prompt: "Add the 43% figure to the retro's \"by the numbers\" section.  Also add a section in the bottom about the time, tokens, and cost.  Note that I was doing this in the background so the time gaps were more about doing other things than working on this project. […]",
+      psrc: {own:true, why:"acting on the previous answer, in the same session"},
+      think: [
+        "Folding the cost figures into the retro's by-the-numbers table",
+        "Qualifying the time figures - gaps are the developer elsewhere, not thinking",
+        "Adding the next-step prompt for the brittle guard test to Open items"
+      ],
+      tools: [
+        {k:"edit", v:"<b>specs/001-gridsweep-retro.md</b> <i>&middot; 360 lines, final</i>"},
+        {k:"edit", v:"<b>prompts.md</b> <i>&middot; all three prompts recorded</i>"}
+      ]
+    }
+  ],
+  files: [
+    {p:"specs/001-gridsweep-retro.md", k:"A", a:360, d:0},
+    {p:"prompts.md", k:"M", a:40, d:11}
+  ],
+  say: "Three prompts, <strong>one commit.</strong> The game is <strong>18% of the repository</strong>, test and tooling code outweighs shipped code 2.2 : 1, and closing the debt cost 44% of the total spend.",
+  panels: [
+    {t:"kv", h:"BY THE NUMBERS", rows:[
+      ["Shipped game", "726 lines", ""],
+      ["Tests and tooling", "1,614 lines", "warnv"],
+      ["Spec artifacts", "1,720 lines", ""],
+      ["Tests, final", "54 · all green", "hi"],
+      ["Claude working time", "2h 03m – 3h 34m", ""],
+      ["Wall-clock span", "12h 00m", "warnv"],
+      ["Sessions", "12", ""],
+      ["Requests", "568", ""],
+      ["Tokens", "49.7M", ""],
+      ["Cost at API rates", "$66.78", ""],
+      ["Saved by prompt caching", "$201", "hi"]
+    ]},
+    {t:"quote", h:"THE TIME FIGURE, AND WHAT IT IS NOT",
+     body:["The run spans <b>twelve hours of wall clock</b>, Sep 1 19:40 to Sep 2 07:40. Almost none of that is work. Merging the twelve sessions onto one timeline and discarding idle gaps gives <b>2h 03m</b> at a five-minute cutoff and <b>3h 34m</b> at fifteen &mdash; the same run measured three ways, <b>not three figures that add up</b>.",
+           "<b>Read that as Claude's working time, and nothing else.</b> The developer ran the project in the background between other work, so the gaps are not thinking time &mdash; they are the developer doing something else entirely.",
+           "<b>Nothing here measures the human review that every gate in this workflow depends on</b> &mdash; which is the one cost the process is actually built around."],
+     src:"specs/001-gridsweep-retro.md, Time"},
+    {t:"quote", h:"THE OPEN ITEM THE RETRO WOULD NOT LET GO",
+     body:["<b>A guard test added in pass 02 has the exact brittleness the final review criticised.</b> It counts regex matches, so writing <code>test('...', { skip, concurrency: 1 }, ...)</code> — a no-op for behaviour — turns it red.",
+           "This is debt item 2's shape, <b>reintroduced by the pass that closed debt item 1</b>. It was verified to go red for the right reason and not checked for going red for wrong ones."],
+     src:"specs/001-gridsweep-retro.md, Open items"},
+    {t:"note", kind:"miss", body:"<b>Then a human opened the page and tried to play it.</b> Two defects, neither of them a defect against the spec: no visible legend of the keyboard controls, and the New game button sitting above the grid where nobody looks at the end of a game."}
+  ],
+  next: {
+    where: "written into specs/001-gridsweep-retro.md \u00b7 Recommended next steps",
+    options: [
+      {tag:"NOT RUN \u00b7 the open item this run leaves behind",
+       text:"Use the human-gated-spec-driven-ai-development skill to make a bounded improvement pass for 001-gridsweep-plan.md fixing the brittle guard test recorded under Open items in 001-gridsweep-retro.md"},
+      {tag:"NOT RUN \u00b7 this is where cycle 002 starts",
+       text:"Use the human-gated-spec-driven-ai-development skill to in lightweight mode to review-spec for a new 002 cycle covering two UI changes to Gridsweep: a visible legend of the keyboard controls, and moving the New game button below the grid. Treat 001-gridsweep-spec.md as the settled baseline -- these are additions to it, not corrections of it."}
+    ],
+    note: "Neither has been run. <b>Nothing suggested writing this retro, and the retro suggests what comes next anyway</b> &mdash; the habit outlived the stage commands that taught it."
+  },
+  hold: 2600,
+  notes: "The one turn that is a conversation: three prompts, one session, no reset between them, all landing in a single commit - the retro, the cost analysis, then folding the figures back in. If anyone asks how long this took: about two to three and a half hours of Claude working, inside a twelve-hour span, and the retro is explicit that the three time figures are alternative measurements rather than parts of a total. The number the retro says it cannot give you is the one that matters most - the human review time every gate depends on. All three are the developer's own; nothing suggested them, because there is no retro stage. Land the numbers, then the open item: the pass that closed one debt item quietly reintroduced the shape of another, and only the retro caught it. Then hand over to the closing card."
+}
+];
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  var T = {
+    head: 520, promptStart: 300, type: 26, submit: 560,
+    thinkStart: 200, think: 880, thinkEnd: 260,
+    tool: 350, fileHead: 260, file: 190,
+    say: 950, panel: 780, frame: 760, gate: 1300, hand: 1200, hold: 1100
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var chat = $("chat"), side = $("sidebody"), sideHead = $("sidehead"), treeEl = $("tree");
+  var fill = $("fill"), ticksEl = $("ticks"), clockEl = $("clock"), labelEl = $("tlabel");
+  var notesEl = $("notes"), notesBody = $("notesbody");
+
+  function el(tag, cls, html) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (html != null) n.innerHTML = html;
+    return n;
+  }
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function commitUrl(sha) { return REPO_URL + "/commit/" + sha; }
+  function blobUrl(sha, path) { return REPO_URL + "/blob/" + sha + "/" + REPO_DIR + "/" + path; }
+
+  /* --- explorer ---------------------------------------------------------- */
+  var rows = {}, groups = {}, rowDir = {};
+  (function buildTree() {
+    var lastDir = null;
+    TREE.forEach(function (path) {
+      var slash = path.lastIndexOf("/");
+      var dir = slash < 0 ? null : path.slice(0, slash);
+      if (dir !== lastDir && dir) {
+        groups[dir] = el("div", "ex-group", "▾ " + dir + "/");
+        treeEl.appendChild(groups[dir]);
+      }
+      rowDir[path] = dir;
+      lastDir = dir;
+      var r = el("div", "ex-row" + (dir ? " in-1" : ""));
+      r.appendChild(el("span", "nm", esc(slash < 0 ? path : path.slice(slash + 1))));
+      r.appendChild(el("span", "tag", ""));
+      treeEl.appendChild(r);
+      rows[path] = r;
+    });
+  })();
+
+  function syncGroups() {
+    Object.keys(groups).forEach(function (dir) {
+      var any = Object.keys(rows).some(function (p) {
+        return rowDir[p] === dir && rows[p].classList.contains("live");
+      });
+      groups[dir].classList.toggle("live", any);
+    });
+  }
+  function treeReset(uptoExclusive) {
+    Object.keys(rows).forEach(function (p) {
+      var r = rows[p];
+      r.classList.remove("live", "hit");
+      r.removeAttribute("data-state");
+      r.querySelector(".tag").textContent = "";
+    });
+    for (var i = 0; i < uptoExclusive; i++) {
+      (STAGES[i].files || []).forEach(function (f) {
+        var r = rows[f.p];
+        if (!r) return;
+        r.classList.add("live");
+        r.setAttribute("data-state", "idle");
+        r.querySelector(".tag").textContent = "";
+      });
+    }
+    syncGroups();
+  }
+  function treeTouch(f) {
+    var r = rows[f.p];
+    if (!r) return;
+    r.classList.add("live", "hit");
+    r.setAttribute("data-state", f.k === "A" ? "new" : "mod");
+    r.querySelector(".tag").textContent = f.k;
+    syncGroups();
+  }
+
+  /* --- side-panel renderers ---------------------------------------------- */
+  function shotBox(file, alt) {
+    var box = el("div", "shot");
+    var img = el("img");
+    img.alt = alt || "Gridsweep screenshot";
+    img.addEventListener("error", function () {
+      box.textContent = "";
+      box.appendChild(el("div", "shot-missing",
+        "screenshot not found &mdash; " + esc(ASSETS) + "<br>run replay/capture.sh"));
+    });
+    img.src = ASSETS + "shots/" + file;
+    box.appendChild(img);
+    return box;
+  }
+
+  function renderPanel(p) {
+    var c = el("div", "card");
+    if (p.h) c.appendChild(el("h3", null, p.h));
+    if (p.t === "shot") {
+      c.appendChild(shotBox(p.img, p.cap));
+      if (p.cap) c.appendChild(el("div", "shot-cap", p.cap));
+    } else if (p.t === "film") {
+      c.className = "card film";
+      var box = shotBox(p.frames[0], p.cap);
+      c.appendChild(box);
+      if (p.cap) c.appendChild(el("div", "shot-cap", p.cap));
+      var strip = el("div", "frames");
+      var dots = p.frames.map(function (f, i) {
+        var b = el("button");
+        b.type = "button";
+        b.title = "Frame " + (i + 1);
+        b.setAttribute("aria-label", "Frame " + (i + 1) + " of " + p.frames.length);
+        b.addEventListener("click", function () { c.setFrame(i); });
+        strip.appendChild(b);
+        return b;
+      });
+      var rep = el("button", "rep", "↺ replay");
+      rep.type = "button";
+      rep.addEventListener("click", function () {
+        var i = 0;
+        c.setFrame(0);
+        clearInterval(c._loop);
+        c._loop = setInterval(function () {
+          i += 1;
+          if (i >= p.frames.length) { clearInterval(c._loop); return; }
+          c.setFrame(i);
+        }, 620);
+      });
+      strip.appendChild(rep);
+      strip.appendChild(el("span", "lbl", p.frames.length + " frames"));
+      c.appendChild(strip);
+      c.setFrame = function (i) {
+        var img = box.querySelector("img");
+        if (img) img.src = ASSETS + "shots/" + p.frames[i];
+        dots.forEach(function (d, j) { d.setAttribute("aria-current", String(j === i)); });
+      };
+      c.setFrame(0);
+    } else if (p.t === "doc") {
+      var d = el("div", "doc");
+      d.appendChild(el("div", "doc-h", p.f));
+      d.appendChild(el("pre", null, p.body));
+      c.appendChild(d);
+    } else if (p.t === "term") {
+      c.appendChild(el("div", "term", p.body));
+    } else if (p.t === "kv") {
+      var dl = el("dl", "kv");
+      p.rows.forEach(function (r) {
+        dl.appendChild(el("dt", null, r[0]));
+        dl.appendChild(el("dd", r[2] || null, r[1]));
+      });
+      c.appendChild(dl);
+    } else if (p.t === "list") {
+      var ul = el("ul", "bullets");
+      p.items.forEach(function (i) { ul.appendChild(el("li", null, i)); });
+      c.appendChild(ul);
+    } else if (p.t === "note") {
+      c.appendChild(el("div", "callout" + (p.kind ? " " + p.kind : ""), p.body));
+    } else if (p.t === "quote") {
+      var q = el("div", "quote");
+      (Array.isArray(p.body) ? p.body : [p.body]).forEach(function (para) {
+        q.appendChild(el("p", null, para));
+      });
+      c.appendChild(q);
+      if (p.src) c.appendChild(el("div", "qsrc", p.src));
+    } else if (p.t === "human") {
+      var box = el("div", "decisions");
+      var ul = el("ul");
+      p.items.forEach(function (it) {
+        var li = el("li");
+        if (it.q) li.appendChild(el("span", "q", it.q));
+        li.appendChild(el("span", it.defer ? "defer" : "d", it.d));
+        ul.appendChild(li);
+      });
+      box.appendChild(ul);
+      c.appendChild(box);
+      if (p.src) c.appendChild(el("div", "qsrc", p.src));
+    }
+    side.appendChild(c);
+    return c;
+  }
+
+  /* --- chat renderers ----------------------------------------------------- */
+  var promptEl = null, thinkEl = null, toolsEl = null, diffEl = null, lastFilm = null;
+
+  function scroll() { chat.scrollTop = chat.scrollHeight; }
+
+  function newTurn(st) {
+    chat.textContent = "";
+    side.textContent = "";
+    promptEl = thinkEl = toolsEl = diffEl = lastFilm = null;
+    var h = el("div", "turnhead");
+    h.appendChild(el("span", "num", "TURN " + st.n));
+    h.appendChild(el("span", "ttl", st.title));
+    if (st.skill) h.appendChild(el("span", "stagechip", "stage: " + st.skill));
+    else if (st.freeform) h.appendChild(el("span", "freechip", "no stage command · " + st.freeform));
+    h.appendChild(el("span", "sha", st.sha));
+    chat.appendChild(h);
+    sideHead.textContent = st.actor === "human" ? "WHAT THE HUMAN PUT IN" : "WHAT CAME OUT";
+    notesBody.innerHTML = st.notes || "";
+  }
+  function sessionLine(n, note) {
+    var s = el("div", "session");
+    s.appendChild(el("span", null, "SESSION <b>" + ("0" + n).slice(-2) + " OF 12</b> \u00b7 FRESH CONTEXT"
+      + (note ? " \u00b7 <i>" + note + "</i>" : "")));
+    chat.appendChild(s);
+    scroll();
+  }
+
+  // Only the hand-written prompts are captioned. The rest need no caption:
+  // the previous turn showed the prompt being written.
+  function promptSource(psrc) {
+    if (!psrc || !psrc.own) return;
+    var d = el("div", "psrc own");
+    d.appendChild(el("span", null, psrc.why));
+    chat.appendChild(d);
+    scroll();
+  }
+
+  function startPrompt(label) {
+    var m = el("div", "msg");
+    m.appendChild(el("div", "who human", label || "DEVELOPER"));
+    promptEl = el("div", "prompt", "<span class='caret'></span>");
+    m.appendChild(promptEl);
+    chat.appendChild(m);
+    scroll();
+  }
+  function typeChunk(txt) {
+    promptEl.insertBefore(document.createTextNode(txt), promptEl.querySelector(".caret"));
+    scroll();
+  }
+  function endPrompt() { promptEl.classList.add("done"); }
+  function handBeat(html, label) {
+    var m = el("div", "msg");
+    m.appendChild(el("div", "who hand", label || "DEVELOPER · NO AGENT TURN"));
+    m.appendChild(el("div", "handnote", html));
+    chat.appendChild(m);
+    scroll();
+  }
+  function startThink() {
+    var m = el("div", "msg");
+    m.appendChild(el("div", "who ai", "AGENT"));
+    thinkEl = el("div", "think");
+    m.appendChild(thinkEl);
+    chat.appendChild(m);
+    scroll();
+  }
+  function thinkLine(txt) {
+    var r = el("div", "row");
+    r.appendChild(el("span", "sp", "●"));
+    r.appendChild(el("span", null, esc(txt)));
+    thinkEl.appendChild(r);
+    scroll();
+  }
+  function endThink() { if (thinkEl) thinkEl.classList.add("done"); }
+  function toolLine(t) {
+    if (!toolsEl) { toolsEl = el("div", "tools"); chat.appendChild(toolsEl); }
+    var r = el("div", "tool" + (t.ok ? " ok" : ""));
+    r.appendChild(el("span", "k", t.k));
+    r.appendChild(el("span", "v", t.v));
+    toolsEl.appendChild(r);
+    scroll();
+  }
+  function fileHead() {
+    diffEl = el("div", "diffbox");
+    diffEl.appendChild(el("h4", null, "FILES CHANGED THIS TURN"));
+    chat.appendChild(diffEl);
+    scroll();
+  }
+  function fileLine(f) {
+    var r = el("div", "dfile " + (f.k === "A" ? "a" : "m"));
+    r.appendChild(el("span", "st", f.k));
+    r.appendChild(el("span", "p", esc(f.p)));
+    var n = "<span class='p1'>+" + f.a + "</span>";
+    if (f.d) n += " <span class='m1'>−" + f.d + "</span>";
+    r.appendChild(el("span", "n", n));
+    diffEl.appendChild(r);
+    treeTouch(f);
+    scroll();
+  }
+  function sayLine(html) {
+    var m = el("div", "msg");
+    m.appendChild(el("div", "say", html));
+    chat.appendChild(m);
+    scroll();
+  }
+  function gateLine(g) {
+    var n = el("div", "gate");
+    n.appendChild(el("div", "g-h", g.h));
+    n.appendChild(el("div", "g-b", g.b));
+    chat.appendChild(n);
+    scroll();
+  }
+
+  // Most agent turns close by writing the next prompt into the artifact's
+  // User gate. Showing it here, where it is produced, is the point: the next
+  // turn's prompt box is this text, pasted into an empty session.
+  function handover(nx) {
+    var box = el("div", "handover" + (nx.none ? " none" : ""));
+    if (nx.none) {
+      box.appendChild(el("div", "ho-h", "NO NEXT PROMPT SUGGESTED"));
+      box.appendChild(el("div", "ho-n", nx.none));
+      chat.appendChild(box);
+      scroll();
+      return;
+    }
+    box.appendChild(el("div", "ho-h", "<b>AGENT</b> <span class='tt'>SUGGESTED NEXT STEP</span> <span class='wh'>&middot; " + nx.where + "</span>"));
+    nx.options.forEach(function (o) {
+      var pre = el("pre", "ho-p" + (o.taken ? " taken" : ""));
+      pre.appendChild(el("span", "ho-tag", o.tag || (o.taken
+        ? "\u25b8 THE ONE THE DEVELOPER RAN, IN THE NEXT SESSION"
+        : "OFFERED, NOT TAKEN")));
+      pre.appendChild(document.createTextNode(o.text));
+      box.appendChild(pre);
+    });
+    if (nx.note) box.appendChild(el("div", "ho-n", nx.note));
+    chat.appendChild(box);
+    scroll();
+  }
+
+  /* --- the turn-complete bar ---------------------------------------------- */
+  function turnEnd(i) {
+    var st = STAGES[i];
+    var last = i === STAGES.length - 1;
+    var box = el("div", "turnend");
+    box.appendChild(el("div", "te-h", "TURN " + st.n + " COMPLETE · PAUSED"));
+    box.appendChild(el("div", "te-b",
+      last ? "That is the whole cycle. Look through this turn, or see how it ends."
+           : "Take as long as you like. Read what actually changed on disk, play the game as it stood at this commit, then move on."));
+    var acts = el("div", "te-acts");
+
+    var bDiff = el("button", null, "What changed <kbd>D</kbd>");
+    bDiff.type = "button";
+    bDiff.addEventListener("click", function () { openSheet(i, "diff"); });
+    acts.appendChild(bDiff);
+
+    if (st.game) {
+      var bGame = el("button", null, "Play the game <kbd>G</kbd>");
+      bGame.type = "button";
+      bGame.addEventListener("click", function () { openSheet(i, "game"); });
+      acts.appendChild(bGame);
+    }
+
+    var a = el("a", null, "Commit on GitHub &#8599;");
+    a.href = commitUrl(st.sha);
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    acts.appendChild(a);
+
+    var bNext = el("button", "primary", last ? "How it ends <kbd>Space</kbd>" : "Next turn <kbd>Space</kbd>");
+    bNext.type = "button";
+    bNext.addEventListener("click", advance);
+    acts.appendChild(bNext);
+
+    box.appendChild(acts);
+    chat.appendChild(box);
+    scroll();
+  }
+
+  /* --- beats -------------------------------------------------------------- */
+  function chunks(s, size) {
+    var out = [];
+    for (var i = 0; i < s.length; i += size) out.push(s.slice(i, i + size));
+    return out;
+  }
+  function buildBeats(st) {
+    var B = [];
+    function add(ms, fn) { B.push({ ms: ms, fn: fn || null }); }
+    add(T.head, function () { newTurn(st); });
+
+    // Some turns start with the developer editing an artifact by hand, before
+    // any prompt is sent. prompts.md records those; they are not agent work.
+    if (st.pre) {
+      add(T.promptStart, function () { handBeat(st.pre, "DEVELOPER · BY HAND, BEFORE PROMPTING"); });
+      add(1400, null);
+    }
+
+    // A turn is normally one prompt. Turn 13 is three, all landing in one
+    // commit, so a turn is modelled as a list of prompt/agent cycles.
+    var cycles = st.cycles || (st.prompt || st.think || st.tools
+      ? [{ prompt: st.prompt, think: st.think, tools: st.tools, psrc: st.psrc, say: null }]
+      : []);
+
+    if (!cycles.length && st.hand) {
+      add(T.promptStart, function () { handBeat(st.hand); });
+      add(1500, null);
+    }
+
+    // Every turn with an agent in it ran in its own session, started clean.
+    // The retro counts twelve sessions; there are twelve turns with an agent.
+    if (st.session) {
+      add(520, function () { sessionLine(st.session, st.sessionNote); });
+    }
+
+    cycles.forEach(function (cy, ci) {
+      if (ci > 0) add(600, null);
+      if (cy.prompt) {
+        add(T.promptStart, function () { startPrompt(cycles.length > 1 ? "DEVELOPER · PROMPT " + (ci + 1) + " OF " + cycles.length : "DEVELOPER"); });
+        chunks(cy.prompt, cycles.length > 1 ? 4 : 2).forEach(function (c) {
+          add(cycles.length > 1 ? T.type * 0.7 : T.type, function () { typeChunk(c); });
+        });
+        add(T.submit, endPrompt);
+        if (cy.psrc) add(420, function () { promptSource(cy.psrc); });
+      }
+      if (cy.think) {
+        add(T.thinkStart, startThink);
+        cy.think.forEach(function (l) { add(T.think, function () { thinkLine(l); }); });
+        add(T.thinkEnd, endThink);
+      }
+      (cy.tools || []).forEach(function (tl) { add(T.tool, function () { toolLine(tl); }); });
+      if (cy.say) add(T.say, function () { sayLine(cy.say); });
+    });
+    if (st.files && st.files.length) {
+      add(T.fileHead, fileHead);
+      st.files.forEach(function (f) { add(T.file, function () { fileLine(f); }); });
+    }
+    (st.panels || []).forEach(function (p) {
+      add(T.panel, function () { lastFilm = renderPanel(p); });
+      if (p.t === "film") {
+        for (var k = 1; k < p.frames.length; k++) {
+          (function (idx, film) {
+            add(T.frame, function () { if (film.card && film.card.setFrame) film.card.setFrame(idx); });
+          })(k, { get card() { return lastFilm; } });
+        }
+      }
+    });
+    if (st.say) add(T.say, function () { sayLine(st.say); });
+    if (st.gate) add(T.gate, function () { gateLine(st.gate); });
+    if (st.next) add(T.hand, function () { handover(st.next); });
+    add(st.hold || T.hold, null);
+    return B;
+  }
+
+  // Number the sessions off the stage list so the two can never disagree.
+  (function numberSessions() {
+    var n = 0;
+    STAGES.forEach(function (st) {
+      if (st.prompt || st.cycles) { n += 1; st.session = n; }
+    });
+  })();
+
+  var BEATS = STAGES.map(buildBeats);
+  var DUR = BEATS.map(function (b) { return b.reduce(function (a, x) { return a + x.ms; }, 0); });
+  var STARTS = [], TOTAL = 0;
+  DUR.forEach(function (d) { STARTS.push(TOTAL); TOTAL += d; });
+
+  /* --- transport state ---------------------------------------------------- */
+  var cur = 0, playing = false, speed = 1, token = 0, elapsed = 0;
+  var stageDone = false, ended = false, autoAdvance = false;
+
+  function fmt(ms) {
+    var s = Math.max(0, Math.round(ms / 1000));
+    return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2);
+  }
+  function paint() {
+    var at = STARTS[cur] + Math.min(elapsed, DUR[cur]);
+    fill.style.width = (at / TOTAL * 100) + "%";
+    clockEl.textContent = fmt(at) + " / " + fmt(TOTAL);
+    var st = STAGES[cur];
+    labelEl.innerHTML = "<b>" + st.n + "</b> · " + st.title;
+    $("track").setAttribute("aria-valuenow", String(cur + 1));
+    tickNodes.forEach(function (t, i) { t.classList.toggle("done", i < cur); });
+    var pp = $("playpause");
+    pp.innerHTML = stageDone ? "&#9197;" : (playing ? "&#10074;&#10074;" : "&#9654;");
+    pp.classList.toggle("atend", stageDone);
+    pp.title = stageDone ? "Next turn (Space)" : "Play / pause (Space)";
+  }
+
+  var tickNodes = STAGES.map(function (st, i) {
+    var t = el("div", "tick" + (st.actor === "human" ? " human" : ""));
+    t.style.left = (STARTS[i] / TOTAL * 100) + "%";
+    t.title = st.n + " · " + st.title.replace(/&middot;/g, "·");
+    ticksEl.appendChild(t);
+    return t;
+  });
+
+  function wait(ms, tok) {
+    return new Promise(function (resolve) {
+      var last = null, used = 0;
+      function tick(now) {
+        if (tok !== token) return;
+        if (last === null) last = now;
+        var dt = Math.min(now - last, 120);
+        last = now;
+        if (playing) { used += dt * speed; elapsed += dt * speed; paint(); }
+        if (used >= ms) { resolve(); } else { requestAnimationFrame(tick); }
+      }
+      requestAnimationFrame(tick);
+    });
+  }
+
+  async function run(i) {
+    var tok = ++token;
+    cur = i; elapsed = 0; stageDone = false; ended = false;
+    treeReset(i);
+    chat.textContent = ""; side.textContent = "";
+    paint();
+    var beats = BEATS[i];
+    for (var b = 0; b < beats.length; b++) {
+      await wait(beats[b].ms, tok);
+      if (tok !== token) return;
+      if (beats[b].fn) beats[b].fn();
+    }
+    if (tok !== token) return;
+    stageDone = true;
+    if (autoAdvance) { advance(); return; }
+    playing = false;
+    paint();
+    turnEnd(i);
+  }
+
+  function advance() {
+    if (cur + 1 < STAGES.length) {
+      playing = true;
+      goTo(cur + 1);
+    } else {
+      ended = true;
+      playing = false;
+      paint();
+      $("outro").hidden = false;
+    }
+  }
+  function goTo(i) {
+    i = Math.max(0, Math.min(STAGES.length - 1, i));
+    $("outro").hidden = true;
+    closeSheet();
+    run(i);
+  }
+  function toggle() {
+    if (!$("outro").hidden) return;
+    if (stageDone) { advance(); return; }
+    playing = !playing;
+    paint();
+  }
+
+  /* --- the explore sheet --------------------------------------------------- */
+  var sheet = $("sheet"), paneDiff = $("pane-diff"), paneGame = $("pane-game");
+  var sheetStage = -1;
+
+  function renderDiff(st) {
+    paneDiff.textContent = "";
+    var raw = (window.REPLAY_DIFFS || {})[st.sha];
+    if (!raw) {
+      paneDiff.appendChild(el("div", "emptydiff",
+        "The local diff file did not load.<br><br>This page reads it from <code>" + ASSETS +
+        "diffs.js</code>; keep the <code>replay/</code> folder next to the HTML, or regenerate it with <code>replay/capture.sh</code>.<br><br>" +
+        "The commit itself is on GitHub — use the button above."));
+      return;
+    }
+    var blocks = raw.split(/^diff --git /m).filter(function (b) { return b.trim(); });
+
+    // Git orders a diff alphabetically. For reading it out loud the shipped
+    // source matters most and the prompts log least, so reorder on that.
+    function pathOf(b) {
+      var m = b.match(/^a\/\S+\s+b\/(\S+)/);
+      var p = m ? m[1] : "";
+      return p.indexOf(REPO_DIR + "/") === 0 ? p.slice(REPO_DIR.length + 1) : p;
+    }
+    function rank(p) {
+      if (/^(board\.js|ui\.js|index\.html|styles\.css)$/.test(p)) return 0;
+      if (p.indexOf("test/") === 0 || p.indexOf("tools/") === 0) return 1;
+      if (p.indexOf("specs/") === 0) return 2;
+      return 3;
+    }
+    blocks = blocks
+      .map(function (b, i) { return { b: b, p: pathOf(b), i: i }; })
+      .sort(function (x, y) { return rank(x.p) - rank(y.p) || x.i - y.i; })
+      .map(function (o) { return o.b; });
+
+    var chips = el("div", "chips");
+    chips.appendChild(el("span", "lead", blocks.length + " file" + (blocks.length === 1 ? "" : "s") + " · jump to"));
+    paneDiff.appendChild(chips);
+
+    blocks.forEach(function (block, i) {
+      var m = block.match(/^a\/\S+\s+b\/(\S+)/);
+      var full = m ? m[1] : "file " + (i + 1);
+      var short = full.indexOf(REPO_DIR + "/") === 0 ? full.slice(REPO_DIR.length + 1) : full;
+      var id = "df" + i;
+
+      var chip = el("button", null, esc(short));
+      chip.type = "button";
+      chip.addEventListener("click", function () {
+        var t = document.getElementById(id);
+        if (t) t.scrollIntoView({ block: "start", behavior: "smooth" });
+      });
+      chips.appendChild(chip);
+
+      var blk = el("div", "dfileblk");
+      blk.id = id;
+      var h = el("h4");
+      h.appendChild(el("span", null, esc(short)));
+      var link = el("a", null, "view file at this commit &#8599;");
+      link.href = blobUrl(st.sha, short);
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      h.appendChild(link);
+      blk.appendChild(h);
+
+      var pre = el("pre");
+      block.split("\n").forEach(function (line) {
+        if (/^(index |--- |\+\+\+ |new file|deleted file|similarity|rename |old mode|new mode|\\ No newline)/.test(line)) return;
+        if (/^a\/\S+\s+b\/\S+/.test(line)) return;
+        var cls = "ctx";
+        if (line[0] === "+") cls = "ad";
+        else if (line[0] === "-") cls = "rm";
+        else if (line[0] === "@") cls = "hh";
+        pre.appendChild(el("span", cls, esc(line) || "&nbsp;"));
+      });
+      blk.appendChild(pre);
+      paneDiff.appendChild(blk);
+    });
+  }
+
+  function renderGame(st) {
+    paneGame.textContent = "";
+    var wrap = el("div", "gamewrap");
+    var note = el("div", "gamenote");
+    // Turns that changed no runtime file still get a page to look at - the one
+    // left standing by the last turn that did. Saying so is the honest bit.
+    var lead = st.game === st.sha
+      ? "This is <b>the real page at commit " + st.sha + "</b>"
+      : "<b>No runtime file changed this turn</b>, so this is still the page at commit <b>" + st.game + "</b>";
+    var body = {
+      stub: ". There is no board yet — Phase 01 ships a dual-load check that prints the computed " +
+            "adjacency grid to prove <code>board.js</code> loads as a classic script over <code>file://</code>. " +
+            "<span class='hint'>The grid arrives in Phase 03, and does nothing until Phase 04.</span>",
+      inert: ", loaded from <code>" + ASSETS + "game/" + st.game + "/</code>. <b>It does not respond to input yet</b> — " +
+             "try clicking a cell. <span class='hint'>Input lands in Phase 04. The phase boundary is real, not a slide.</span>",
+      live: ", loaded from <code>" + ASSETS + "game/" + st.game + "/</code> — not a picture. Click a cell to reveal it, " +
+            "right-click to mark it. <span class='hint'>Keyboard: arrows move, Enter or Space reveals, F marks. " +
+            "Nothing on the page tells you that, which is the point.</span>"
+    }[st.gameKind || "live"];
+    note.innerHTML = lead + body;
+    wrap.appendChild(note);
+    var host = el("div", "gamehost");
+    var f = document.createElement("iframe");
+    f.src = ASSETS + "game/" + st.game + "/index.html";
+    f.title = "Gridsweep at commit " + st.sha;
+    host.appendChild(f);
+    wrap.appendChild(host);
+    paneGame.appendChild(wrap);
+  }
+
+  function openSheet(i, tab) {
+    var st = STAGES[i];
+    playing = false;
+    if (sheetStage !== i) {
+      renderDiff(st);
+      paneGame.textContent = "";
+      sheetStage = i;
+    }
+    $("sheettitle").innerHTML = "TURN <b>" + st.n + "</b> · commit <b>" + st.sha + "</b>";
+    $("ghlink").href = commitUrl(st.sha);
+    if (tab === "game" && !st.game) tab = "diff";
+    selectTab(tab || "diff", st);
+    sheet.hidden = false;
+    paint();
+  }
+  function selectTab(tab, st) {
+    Array.prototype.forEach.call($("tabs").children, function (b) {
+      b.setAttribute("aria-selected", String(b.dataset.tab === tab));
+      b.hidden = (b.dataset.tab === "game" && !st.game);
+    });
+    paneDiff.hidden = tab !== "diff";
+    paneGame.hidden = tab !== "game";
+    if (tab === "game" && !paneGame.firstChild) renderGame(st);
+  }
+  function closeSheet() { sheet.hidden = true; }
+
+  $("tabs").addEventListener("click", function (e) {
+    var b = e.target.closest("button");
+    if (b) selectTab(b.dataset.tab, STAGES[sheetStage]);
+  });
+  $("sheetclose").addEventListener("click", closeSheet);
+
+  /* --- resizable columns ---------------------------------------------------
+     The explorer and the detail panel are dragged; the transcript takes what is
+     left. Widths persist per browser, and a double-click on a grip resets it. */
+  var LAYOUT_KEY = "gridsweep-replay-layout";
+  var DEFAULTS = { L: 216, R: null };          // R null = the CSS default, 34%
+  var LIMITS = { Lmin: 150, Lmax: 460, Rmin: 280, Cmin: 320 };
+  var rootStyle = document.documentElement.style;
+
+  function applyLayout(v) {
+    if (v.L != null) rootStyle.setProperty("--wL", v.L + "px");
+    if (v.R != null) rootStyle.setProperty("--wR", v.R + "px");
+  }
+  function saveLayout(v) {
+    try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(v)); } catch (e) { /* private mode */ }
+  }
+  var layout = (function () {
+    try {
+      var raw = localStorage.getItem(LAYOUT_KEY);
+      if (raw) return Object.assign({}, DEFAULTS, JSON.parse(raw));
+    } catch (e) { /* private mode, or someone else's JSON */ }
+    return Object.assign({}, DEFAULTS);
+  })();
+  applyLayout(layout);
+
+  function widthOf(el2) { return el2.getBoundingClientRect().width; }
+
+  function dragGrip(grip, side) {
+    grip.addEventListener("pointerdown", function (e) {
+      e.preventDefault();
+      grip.setPointerCapture(e.pointerId);
+      grip.classList.add("dragging");
+      document.body.classList.add("resizing");
+      var area = document.querySelector(".stagearea");
+      var areaBox = area.getBoundingClientRect();
+
+      function move(ev) {
+        var total = areaBox.width;
+        var otherSide = side === "L" ? widthOf($("side")) : widthOf($("explorer"));
+        if (side === "L") {
+          var wl = ev.clientX - areaBox.left;
+          wl = Math.max(LIMITS.Lmin, Math.min(wl, LIMITS.Lmax, total - otherSide - LIMITS.Cmin - 14));
+          layout.L = Math.round(wl);
+        } else {
+          var wr = areaBox.right - ev.clientX;
+          wr = Math.max(LIMITS.Rmin, Math.min(wr, total - otherSide - LIMITS.Cmin - 14));
+          layout.R = Math.round(wr);
+        }
+        applyLayout(layout);
+      }
+      function up(ev) {
+        grip.releasePointerCapture(ev.pointerId);
+        grip.classList.remove("dragging");
+        document.body.classList.remove("resizing");
+        grip.removeEventListener("pointermove", move);
+        grip.removeEventListener("pointerup", up);
+        saveLayout(layout);
+      }
+      grip.addEventListener("pointermove", move);
+      grip.addEventListener("pointerup", up);
+    });
+
+    grip.addEventListener("dblclick", function () {
+      if (side === "L") { layout.L = DEFAULTS.L; rootStyle.setProperty("--wL", DEFAULTS.L + "px"); }
+      else { layout.R = null; rootStyle.removeProperty("--wR"); }
+      saveLayout(layout);
+    });
+
+    // Keyboard: the grips are real separators, so they move with the arrows.
+    grip.addEventListener("keydown", function (e) {
+      var step = e.shiftKey ? 48 : 16;
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      e.preventDefault();
+      e.stopPropagation();
+      var dir = e.key === "ArrowLeft" ? -1 : 1;
+      if (side === "L") {
+        layout.L = Math.max(LIMITS.Lmin, Math.min(LIMITS.Lmax, (layout.L || widthOf($("explorer"))) + dir * step));
+      } else {
+        layout.R = Math.max(LIMITS.Rmin, (layout.R || widthOf($("side"))) - dir * step);
+      }
+      applyLayout(layout);
+      saveLayout(layout);
+    });
+  }
+  dragGrip($("gripL"), "L");
+  dragGrip($("gripR"), "R");
+
+  /* --- wiring ------------------------------------------------------------- */
+  $("playpause").addEventListener("click", toggle);
+  $("prev").addEventListener("click", function () { goTo(elapsed > 2500 && !stageDone ? cur : cur - 1); });
+  $("next").addEventListener("click", function () { playing = true; goTo(cur + 1); });
+  $("track").addEventListener("click", function (e) {
+    var r = this.getBoundingClientRect();
+    var at = (e.clientX - r.left) / r.width * TOTAL;
+    var i = 0;
+    while (i + 1 < STARTS.length && STARTS[i + 1] <= at) i++;
+    playing = true;
+    goTo(i);
+  });
+  $("track").addEventListener("keydown", function (e) {
+    if (e.key === "ArrowLeft") { e.preventDefault(); goTo(cur - 1); }
+    if (e.key === "ArrowRight") { e.preventDefault(); playing = true; goTo(cur + 1); }
+  });
+  $("speed").addEventListener("click", function (e) {
+    var b = e.target.closest("button");
+    if (!b) return;
+    speed = parseFloat(b.dataset.s);
+    Array.prototype.forEach.call(this.children, function (c) {
+      c.setAttribute("aria-pressed", String(c === b));
+    });
+  });
+  $("autobtn").addEventListener("click", function () {
+    autoAdvance = !autoAdvance;
+    this.setAttribute("aria-pressed", String(autoAdvance));
+    if (autoAdvance && stageDone) advance();
+  });
+  $("notesbtn").addEventListener("click", function () {
+    notesEl.hidden = !notesEl.hidden;
+    this.setAttribute("aria-pressed", String(!notesEl.hidden));
+  });
+  $("fsbtn").addEventListener("click", function () {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+  });
+
+  function begin(play) {
+    $("intro").hidden = true;
+    playing = play;
+    goTo(0);
+  }
+  $("startbtn").addEventListener("click", function () { begin(true); });
+  $("skipbtn").addEventListener("click", function () { begin(false); });
+  $("replaybtn").addEventListener("click", function () { $("outro").hidden = true; playing = true; goTo(0); });
+  $("closeoutro").addEventListener("click", function () { $("outro").hidden = true; playing = false; goTo(STAGES.length - 1); });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (!$("intro").hidden) {
+      if (e.key === " " || e.key === "Enter") { e.preventDefault(); begin(true); }
+      return;
+    }
+    if (e.key === "Escape" && !sheet.hidden) { e.preventDefault(); closeSheet(); return; }
+    if (!$("outro").hidden) return;
+    switch (e.key) {
+      case " ": e.preventDefault(); if (!sheet.hidden) closeSheet(); toggle(); break;
+      case "ArrowRight": case "PageDown": e.preventDefault(); playing = true; goTo(cur + 1); break;
+      case "ArrowLeft": case "PageUp": e.preventDefault(); goTo(elapsed > 2500 && !stageDone ? cur : cur - 1); break;
+      case "Home": e.preventDefault(); goTo(0); break;
+      case "End": e.preventDefault(); goTo(STAGES.length - 1); break;
+      case "d": case "D": e.preventDefault(); openSheet(cur, "diff"); break;
+      case "g": case "G": e.preventDefault(); if (STAGES[cur].game) openSheet(cur, "game"); break;
+      case "n": case "N": $("notesbtn").click(); break;
+      case "f": case "F": $("fsbtn").click(); break;
+      case "1": case "2": case "3": case "4":
+        var m = { "1": 0.5, "2": 1, "3": 2, "4": 4 }[e.key];
+        speed = m;
+        Array.prototype.forEach.call($("speed").children, function (c) {
+          c.setAttribute("aria-pressed", String(parseFloat(c.dataset.s) === m));
+        });
+        break;
+    }
+  });
+
+  paint();
+})();
+</script>
+</body>
+</html>

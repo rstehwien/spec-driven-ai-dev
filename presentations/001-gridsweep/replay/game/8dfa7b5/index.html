@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gridsweep</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main class="game">
+  <h1>Gridsweep</h1>
+
+  <div class="hud">
+    <p class="counter">
+      Mines remaining: <span id="mines-remaining">10</span>
+    </p>
+    <button type="button" id="new-game">New game</button>
+  </div>
+
+  <!-- The status line is the only announcement the spec allows: no separate
+       live region reports cascades or game end. -->
+  <p id="status" class="status" role="status"></p>
+
+  <div
+    id="board"
+    class="board"
+    role="grid"
+    aria-label="Gridsweep board, 8 rows by 8 columns"
+  ></div>
+</main>
+
+<!-- Classic scripts, in order. A page opened over file:// refuses module
+     scripts, so neither file may ever become type="module". -->
+<script src="board.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

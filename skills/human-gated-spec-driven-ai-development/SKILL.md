@@ -143,6 +143,7 @@ If the user explicitly says `lightweight mode` or clearly asks for a lighter ver
 - Write specs as target state only. Route history, rationale, and process state to the homes listed in this skill, or delete them.
 - Keep questions artifacts such as `NNN-questions-YY.md` or `NNN-<label>-questions-YY.md` as a numbered clarification history. Do not delete prior question sets after folding them into the spec.
 - Give every question in a questions artifact a concrete recommendation, so the developer can settle it by accepting rather than by composing an answer.
+- Whenever you write a question for the developer, in a questions artifact or in a spec review, put its recommendation inline under that question rather than in a trailing summary section. A recommendation separated from its question forces the developer to re-derive which question it belongs to, which is exactly the review cost this workflow exists to avoid.
 - In questions artifacts, treat blockquoted labels such as `> Decision:` and `> Question:` as developer feedback. `> Decision: accept recommendation` takes that question's recommendation as written. Any other `Decision` content overrides it. `Question` content stays as unresolved clarification.
 - **Every question needs an explicit answer.** An unanswered question is unanswered - never treat silence as acceptance, and never fold a recommendation the developer did not accept in writing.
 - Treat `fold-questions` as the clarification-loop stage: after answers are added, update the spec as far as possible and then either keep the resolved questions file as history or produce the next numbered set of unresolved questions.
@@ -331,7 +332,11 @@ Group questions by topic. Distinguish must-answer questions from useful clarific
 
 **Every question carries a recommendation.** Name the answer you would choose and give the reason in one or two sentences, so the developer can settle the question by accepting it rather than by composing an answer from scratch. State what it costs if the recommendation is wrong, so the developer knows which ones are worth overriding.
 
+Write the recommendation inline, directly under its question. Never collect recommendations or assumptions into a trailing section at the end of the artifact, and never write a single recommendation that answers several questions at once. Each question must be decidable in place, without the reader scrolling elsewhere to find out what you are proposing.
+
 The recommendation makes approval cheap; it does not make it automatic. A question the developer did not answer stays open and blocks the fold. **There is no fallback and no default answer** - never label a recommendation as one, and never keep a separate list of assumptions that apply when a question goes unanswered. One recommendation, written next to its question, answered explicitly.
+
+Number questions continuously across every topic and section so each recommendation is unambiguously tied to one question.
 
 Ask a question only when the answer changes what gets built. A question whose two answers produce the same code is not a question.
 
@@ -356,6 +361,8 @@ Read the answered `specs/NNN-questions-YY.md` or `specs/NNN-<label>-questions-YY
 Check the word count before and after. **A spec that grew during a fold was appended to, not folded.** Growth is only correct when an answer genuinely adds a requirement that did not exist; if it grew for any other reason, redo the fold as a replacement.
 
 Report which recommendations were accepted and which were overridden, and name the ones that change what ships. Once folded, an accepted recommendation is a commitment and the spec states it as fact, with no trace of the question it settled.
+
+Say plainly in your summary which questions came back because they were never decided.
 
 Then decide whether clarification is complete:
 

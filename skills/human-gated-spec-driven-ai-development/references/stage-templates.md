@@ -20,12 +20,19 @@ Use this structure when the user asks for a spec review:
 - likely implementation traps
 
 ## Clarifying Questions
-- must-answer
+- must-answer question
+  - Recommend: the answer you would choose, and why
+  - If wrong: what would have to change later
 - useful clarification
+  - Recommend: ...
+  - If wrong: ...
 
 ## Assumptions at Risk
+Only assumptions that are not attached to a specific question above. If an
+assumption is the recommendation for a question, it belongs inline with that
+question and must not be repeated here.
+
 - assumption 1
-- assumption 2
 
 ## Recommended Spec Changes
 - change 1
@@ -40,7 +47,9 @@ Use this structure when the user asks for a spec review:
 
 Create `specs/NNN-questions-01.md` or the next numbered `specs/NNN-questions-YY.md` file with this structure. If the related spec uses a label (for example `001-auth-spec.md`), include the same label in the questions filename (`specs/001-auth-questions-01.md`). The label must stay consistent across the entire artifact set.
 
-Budget: 1,000 words. Every question carries a recommendation so the developer can settle it by accepting rather than by composing an answer. Every question still needs an explicit answer - a recommendation is never adopted by default.
+Budget: 1,000 words. Every question carries a recommendation, written inline directly under that question, so the developer can settle it by accepting rather than by composing an answer. Do not add a trailing section that collects recommendations or assumptions, and do not write one recommendation that covers several questions at once — the reader must be able to decide each question without scrolling elsewhere. Number questions continuously across all topics and sections so a recommendation is never ambiguous about which question it belongs to.
+
+Every question still needs an explicit answer - a recommendation is never adopted by default.
 
 ```md
 # Questions for Spec 001 (or 001-auth)
@@ -50,20 +59,26 @@ Budget: 1,000 words. Every question carries a recommendation so the developer ca
 
 ## Must Answer
 
-### Q1 - [the question, one line]
+### Topic: [topic]
+
+#### Q1 - [the question, one line]
 **Recommend:** [the answer you would choose, and why, in one or two sentences]
 **If wrong:** [what this changes if it is not what the developer wants]
 
-### Q2 - [the question, one line]
+#### Q2 - [the question, one line]
 **Recommend:** [...]
 **If wrong:** [...]
 
 ## Useful Clarifications
 
-### Q3 - [the question, one line]
+### Topic: [topic]
+
+#### Q3 - [the question, one line]
 **Recommend:** [...]
 
 ## How to Answer
+
+Every question needs an explicit decision, placed directly under the question it answers.
 
 To take the recommendation as written:
 

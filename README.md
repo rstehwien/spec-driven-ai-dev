@@ -104,6 +104,8 @@ flowchart LR
 
 Modern Claude, Codex, and Antigravity ship capable planning modes that ask clarifying questions and structure work before implementation. They plan well *within* a session. But unless explicitly prompted, they leave their plans and clarifications in chat state that does not survive the session, cannot be cited from another agent, and cannot be handed to a second model. That is the gap this methodology fills: persistence and portability of planning state, not planning quality itself.
 
+There is a related economic observation worth naming. Today, vendor-specific plan modes benefit from a subscription-based advantage — using Claude Code's plan mode is effectively free if you already pay for a Max subscription, and the same holds for Codex, Cursor, and others. That advantage has a time limit. GitHub Copilot has already moved to metered billing for its stronger models; other vendors will feel the same pressure as they mature and their investors expect margin. As metered billing spreads, per-phase model choice becomes a cost decision, not just a quality one, and the durable, portable artifacts this workflow produces make routing specific phases to specific models — including cheaper or local ones — practical instead of theoretical.
+
 ---
 
 ## What “Human-Gated” and “Spec-Driven” Each Mean

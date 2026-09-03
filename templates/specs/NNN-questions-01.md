@@ -7,7 +7,10 @@
 >
 > **Budget: 1,000 words, hard ceiling 1,500.**
 > Ask only what changes what gets built. If both answers produce the same code, it is not a question.
-> **Every question carries a recommendation**, so answering can be one word.
+> **Every question carries a recommendation**, written inline under that question, so answering can be one word.
+> Number questions continuously across all topics. Never collect recommendations into a trailing section.
+> `Decision` content gets folded into the spec. `Question` content stays as unresolved clarification.
+> A question left blank is unresolved, not agreed, and its recommendation is never folded in on its own.
 > Delete this blockquote before answering.
 
 ## Repo Context Checked
@@ -16,19 +19,23 @@
 
 ## Must Answer
 
-### Q1 - [the question, one line]
+### Topic: [topic]
+
+#### Q1 - [the question, one line]
 
 **Recommend:** [the answer you would choose, and the reason, in one or two sentences.]
 **If wrong:** [what this changes if the recommendation is not what you want.]
 
-### Q2 - [the question, one line]
+#### Q2 - [the question, one line]
 
 **Recommend:** [...]
 **If wrong:** [...]
 
 ## Useful Clarifications
 
-### Q3 - [the question, one line]
+### Topic: [topic]
+
+#### Q3 - [the question, one line]
 
 **Recommend:** [...]
 
