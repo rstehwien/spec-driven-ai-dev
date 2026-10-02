@@ -481,7 +481,7 @@ In that bounded improvement cycle, normally rerun the relevant tests and update 
 
 This skill is for local filesystem environments such as Codex or Claude Code.
 
-Prefer editing existing repo files directly when the requested stage calls for it. Keep markdown artifacts in `specs/`. When creating a new spec cycle, choose the next available three-digit prefix.
+Prefer editing existing repo files directly when the requested stage calls for it. Keep markdown artifacts in `specs/`. When appending a genuinely new latest cycle, choose the next available three-digit prefix. When the new cycle belongs earlier in the implementation order - for example a foundation another cycle will build on - do not just take the next number; insert it at the correct position and renumber the later cycles so the prefix keeps reflecting implementation order and precedence, per the numbering rule in "Artifact conventions" (a higher number supersedes a lower one).
 
 ## Output behavior
 
