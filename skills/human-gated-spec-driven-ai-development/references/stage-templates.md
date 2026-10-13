@@ -156,13 +156,13 @@ Use `specs/001-phase-01-review.md`, or `specs/001-auth-phase-01-review.md` when 
 - criterion: met | not met | partial
 
 ## Must-fix issues
-- issue
+- [ ] issue
 
 ## Should-fix issues
-- issue
+- [ ] issue
 
 ## Optional improvements
-- improvement
+- [ ] improvement
 
 ## Approval recommendation
 - approve | revise
@@ -217,22 +217,27 @@ Use this structure:
 - finding
 
 ## Critical issues
-- issue
+- [ ] issue
 
 ## Important improvements
-- item
+- [ ] item
 
 ## Cleanup opportunities
-- item
+- [ ] item
 
 ## Technical debt register
-- debt
+- [ ] debt: owner / when
 
 ## Go / no-go recommendation
 - go | no-go
+
+## Resolution
+- added by the improvement cycle, if one runs: the phase that took the items, its review artifact, and the commit range; items above are marked `[x]` fixed, `[-]` deferred (owner), or `[!]` will not fix (reason) in place
 
 ## User gate
 - review final implementation, tests, and open risks
 - if approved, treat the work as complete; otherwise start another spec or implementation cycle
 - example prompt: `Use the human-gated-spec-driven-ai-development skill to review-spec for specs/002-spec.md` (or `specs/002-auth-spec.md` when a label is used)
 ```
+
+Finding markers in both review artifacts: `[ ]` open, `[x]` fixed with a pointer to the evidence, `[-]` deferred with an owner, `[!]` will not fix with a reason. The stage that closes a finding marks it in the artifact that raised it.

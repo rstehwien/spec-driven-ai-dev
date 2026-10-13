@@ -458,6 +458,15 @@ Update or create the phase review artifact.
 
 If the user approves the phase after this review, update the retro artifact to reflect the approved outcome and recommended next step.
 
+Every finding in a review artifact carries a status marker so the artifact never reads as an open list once work has happened. The markers mirror the plan checklist; for findings they mean:
+
+- `[ ]` open: nothing has been decided or done
+- `[x]` fixed: followed by where the evidence is (a commit, a test name, or the phase review that recorded the fix)
+- `[-]` deferred: followed by the owner, which is normally a later phase or a numbered spec
+- `[!]` will not fix: followed by the reason
+
+A finding is marked in the artifact that raised it, by whichever later stage closes it. When a later phase fixes a should-fix or optional item from an earlier phase review, that later phase's `implement-next-phase` run updates the earlier review artifact's marker before it hands back. The review artifact is the index of what was found; the phase review of the fixing phase holds the evidence.
+
 ### `final-review`
 
 Use this optional stage to assist the developer's final review. Review the full implementation against the spec, plan, architecture quality, maintainability, and the design principles in `references/review-principles.md`.
@@ -473,9 +482,11 @@ Focus especially on:
 - testability
 - hidden technical debt
 
+Every item in the critical, important, cleanup, and technical-debt sections carries the same status marker as phase-review findings (`[ ]` open, `[x]` fixed, `[-]` deferred, `[!]` will not fix), followed by the evidence, owner, or reason. A fresh final review starts with every item `[ ]`.
+
 If the user wants changes after the final review, treat that as a new bounded improvement cycle grounded in the same approved spec and plan unless they explicitly ask to revise those artifacts too.
 
-In that bounded improvement cycle, normally rerun the relevant tests and update affected plan, review, or retro artifacts before returning the work to the developer.
+Run that improvement cycle as one more plan phase: add it to the plan with one checklist item per review item it takes on, implement it under `implement-next-phase` rules, and write its phase review and retro. The phase review holds the evidence, one row per review item with the fix and its regression test. Then update the final review artifact in place: mark each item `[x]`, `[-]`, or `[!]` with a pointer to that row, owner, or reason, and add a short "Resolution" section naming the phase and the commits. The final review artifact stays the index a reader opens first; it must say what became of every item without the reader having to open anything else. Rerun the relevant tests before returning the work to the developer.
 
 ## Filesystem behavior
 
