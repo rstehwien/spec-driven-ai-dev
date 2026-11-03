@@ -57,8 +57,6 @@ Assume the canonical artifact set below unless the repo clearly uses a compatibl
 - `specs/001-auth-questions-01.md` for the first clarification pass
 - `specs/001-phase-01-review.md`
 - `specs/001-auth-phase-01-review.md`
-- `specs/001-phase-01-retro.md`
-- `specs/001-auth-phase-01-retro.md`
 
 Use three-digit spec ids such as `001`, `002`, `003`.
 An optional label may appear between the numeric prefix and artifact type, for example `001-auth-spec.md`.
@@ -90,18 +88,16 @@ For naming, prefer:
 - `specs/001-auth-plan.md`
 - `specs/001-phase-01-review.md`
 - `specs/001-auth-phase-01-review.md`
-- `specs/001-phase-01-retro.md`
-- `specs/001-auth-phase-01-retro.md`
 
 The label is optional and exists only to help developers recognize the workstream at a glance. The three-digit numeric prefix remains the primary grouping key, and if a label is used it must stay consistent across every related artifact in the set.
 
-Label propagation rule: whenever the working spec uses a label (for example `001-auth-spec.md`), every artifact you create or update for the same cycle must include the same label. That includes questions artifacts (`001-auth-questions-YY.md`), the plan (`001-auth-plan.md`), phase review artifacts (`001-auth-phase-NN-review.md`), and phase retro artifacts (`001-auth-phase-NN-retro.md`). Do not drop the label, do not change the label between artifacts, and do not mix labeled and unlabeled filenames within one cycle. Before creating any new artifact, check the existing spec filename for a label and reuse it verbatim.
+Label propagation rule: whenever the working spec uses a label (for example `001-auth-spec.md`), every artifact you create or update for the same cycle must include the same label. That includes questions artifacts (`001-auth-questions-YY.md`), the plan (`001-auth-plan.md`), and phase review artifacts (`001-auth-phase-NN-review.md`). Do not drop the label, do not change the label between artifacts, and do not mix labeled and unlabeled filenames within one cycle. Before creating any new artifact, check the existing spec filename for a label and reuse it verbatim.
 
 For tiny or low-risk work, a lighter version of the workflow is acceptable:
 
 - use a short spec
 - generate a compact plan with 2 to 4 steps or one short phase
-- skip phase review and retro artifacts unless the user asks for the full workflow
+- skip phase review artifacts unless the user asks for the full workflow
 - still pause for human review before implementation and before declaring completion
 
 ## Stage commands
@@ -139,7 +135,7 @@ If the user explicitly says `lightweight mode` or clearly asks for a lighter ver
 - During implementation, update code and tests in red/green tdd style whenever feasible.
 - After implementation, verify the project compiles and the full project test suite passes before marking a phase complete.
 - If compilation or tests fail, record the blocked state honestly in the plan and review artifacts.
-- Hold every artifact to the budgets and content rules in this skill. Cut to fit before handing a stage back.
+- Hold every artifact to the content rules and hard ceilings in this skill. Over a budget, cut what is not a requirement before handing a stage back.
 - Write specs as target state only. Route history, rationale, and process state to the homes listed in this skill, or delete them.
 - Keep questions artifacts such as `NNN-questions-YY.md` or `NNN-<label>-questions-YY.md` as a numbered clarification history. Do not delete prior question sets after folding them into the spec.
 - Give every question in a questions artifact a concrete recommendation, so the developer can settle it by accepting rather than by composing an answer.
@@ -147,12 +143,13 @@ If the user explicitly says `lightweight mode` or clearly asks for a lighter ver
 - In questions artifacts, treat blockquoted labels such as `> Decision:` and `> Question:` as developer feedback. `> Decision: accept recommendation` takes that question's recommendation as written. Any other `Decision` content overrides it. `Question` content stays as unresolved clarification.
 - **Every question needs an explicit answer.** An unanswered question is unanswered - never treat silence as acceptance, and never fold a recommendation the developer did not accept in writing.
 - Treat `fold-questions` as the clarification-loop stage: after answers are added, update the spec as far as possible and then either keep the resolved questions file as history or produce the next numbered set of unresolved questions.
-- Keep handoff notes in the plan, review, and retro artifacts rather than creating a separate handoff file.
+- Keep handoff notes in the plan and review artifacts rather than creating a separate handoff file.
+- There is no retro artifact. What a retro would hold either already lives in git and the plan, or belongs in the phase review's Deviations and Lessons sections. A lesson that should change every later run goes to the project's agent instructions file.
 
 ## Artifact size and content rules
 
-These are gates, not guidance. An artifact that violates them is not ready for the
-next stage.
+The content rules and the hard ceilings are gates. An artifact that violates them is not
+ready for the next stage. The budgets are targets.
 
 ### Budgets
 
@@ -163,10 +160,20 @@ next stage.
 | questions file | 1,000 words | 1,500 |
 | a single requirement | 50 words | - |
 
-State the word count when you create or update a spec or plan. If an artifact is over
-budget, cut it before handing it back rather than handing back an over-budget artifact
-with an apology. If the work genuinely does not fit, that is a signal to split the
-cycle, not to raise the budget.
+Count prose only. Tables and fenced code blocks do not count, because a reader scans a
+table of values rather than reading it, and a values table is the form this skill asks
+for. State the prose word count when you create or update a spec or plan.
+
+When an artifact is over its budget:
+
+1. Remove everything that is not a target-state requirement: history, rationale,
+   process state, inventories, restated project rules, and repetition.
+2. If what remains is all requirements, an artifact between the budget and the ceiling
+   is acceptable. Report the count and move on.
+3. Never compress a requirement into terser wording, or drop a qualifier it needs, just
+   to reach the number. A requirement that is harder to read costs more than the words
+   it saves.
+4. Over the ceiling, split the cycle rather than raising the ceiling.
 
 ### A spec states target state only
 
@@ -306,7 +313,7 @@ Read the current spec and identify ambiguity, contradictions, missing constraint
 
 Use repo reconnaissance to call out where the spec already aligns with existing code or docs, and where it conflicts with them.
 
-Check the spec against the budgets and content rules in this skill, and report each violation as an issue with the cut that fixes it. An over-budget spec, or one carrying history, rationale, or process state, is not ready to plan from.
+Check the spec against the budgets and content rules in this skill, and report each violation as an issue with the cut that fixes it. A spec over its ceiling, or one carrying history, rationale, or process state, is not ready to plan from. A spec between budget and ceiling is ready if its extra length is requirements.
 
 Create or update the spec review in-place or in a review artifact if the user requests it. Prefer concise, actionable feedback.
 
@@ -411,11 +418,11 @@ Consult `references/stage-templates.md` and `references/review-principles.md`.
 9. Update the plan checklist states accurately as work progresses.
 10. When work is blocked, mark the relevant items as `[!]` and record the reason in the plan so the developer can review the actual blocker.
 11. Write or update implementation evidence in the plan.
-12. If the user asked for full workflow artifacts, create or update draft phase review and retro artifacts, but keep them clearly unapproved until `review-phase` is run.
+12. If the user asked for full workflow artifacts, create or update a draft phase review artifact, but keep it clearly unapproved until `review-phase` is run.
 
 Never mark a task complete unless the implementation and validation support it.
 
-Consult `references/stage-templates.md` for review and retro formats.
+Consult `references/stage-templates.md` for the review format.
 
 ### `implement-spec`
 
@@ -456,7 +463,7 @@ Classify findings into:
 
 Update or create the phase review artifact.
 
-If the user approves the phase after this review, update the retro artifact to reflect the approved outcome and recommended next step.
+If the user approves the phase after this review, update the review's recommendation to the approved outcome and the next step, and fill its Lessons section.
 
 Every finding in a review artifact carries a status marker so the artifact never reads as an open list once work has happened. The markers mirror the plan checklist; for findings they mean:
 
@@ -486,7 +493,7 @@ Every item in the critical, important, cleanup, and technical-debt sections carr
 
 If the user wants changes after the final review, treat that as a new bounded improvement cycle grounded in the same approved spec and plan unless they explicitly ask to revise those artifacts too.
 
-Run that improvement cycle as one more plan phase: add it to the plan with one checklist item per review item it takes on, implement it under `implement-next-phase` rules, and write its phase review and retro. The phase review holds the evidence, one row per review item with the fix and its regression test. Then update the final review artifact in place: mark each item `[x]`, `[-]`, or `[!]` with a pointer to that row, owner, or reason, and add a short "Resolution" section naming the phase and the commits. The final review artifact stays the index a reader opens first; it must say what became of every item without the reader having to open anything else. Rerun the relevant tests before returning the work to the developer.
+Run that improvement cycle as one more plan phase: add it to the plan with one checklist item per review item it takes on, implement it under `implement-next-phase` rules, and write its phase review. The phase review holds the evidence, one row per review item with the fix and its regression test. Then update the final review artifact in place: mark each item `[x]`, `[-]`, or `[!]` with a pointer to that row, owner, or reason, and add a short "Resolution" section naming the phase and the commits. The final review artifact stays the index a reader opens first; it must say what became of every item without the reader having to open anything else. Rerun the relevant tests before returning the work to the developer.
 
 ## Filesystem behavior
 

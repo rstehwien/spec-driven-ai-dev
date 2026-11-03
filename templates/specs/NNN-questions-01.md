@@ -5,7 +5,7 @@
 > Use a two-digit suffix (`01`, `02`, `03`) and increment for each new clarification pass -
 > do not overwrite or delete prior question sets.
 >
-> **Budget: 1,000 words, hard ceiling 1,500.**
+> **Budget: 1,000 words of prose, hard ceiling 1,500.**
 > Ask only what changes what gets built. If both answers produce the same code, it is not a question.
 > **Every question carries a recommendation**, written inline under that question, so answering can be one word.
 > Number questions continuously across all topics. Never collect recommendations into a trailing section.

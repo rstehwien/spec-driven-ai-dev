@@ -8,7 +8,7 @@ Use this structure when the user asks for a spec review:
 # Spec Review
 
 ## Budget and content check
-- word count: N of 1,000
+- prose word count (tables and code excluded): N, against a 1,000 budget and a 1,500 ceiling
 - target-state violations: history, rationale, process state, repo inventory, or agent-directed instructions found in the spec, each with the cut that fixes it
 - density: bold as a share of words, longest requirement, cross-reference count
 
@@ -47,7 +47,7 @@ question and must not be repeated here.
 
 Create `specs/NNN-questions-01.md` or the next numbered `specs/NNN-questions-YY.md` file with this structure. If the related spec uses a label (for example `001-auth-spec.md`), include the same label in the questions filename (`specs/001-auth-questions-01.md`). The label must stay consistent across the entire artifact set.
 
-Budget: 1,000 words. Every question carries a recommendation, written inline directly under that question, so the developer can settle it by accepting rather than by composing an answer. Do not add a trailing section that collects recommendations or assumptions, and do not write one recommendation that covers several questions at once — the reader must be able to decide each question without scrolling elsewhere. Number questions continuously across all topics and sections so a recommendation is never ambiguous about which question it belongs to.
+Budget: 1,000 words of prose, hard ceiling 1,500. Every question carries a recommendation, written inline directly under that question, so the developer can settle it by accepting rather than by composing an answer. Do not add a trailing section that collects recommendations or assumptions, and do not write one recommendation that covers several questions at once — the reader must be able to decide each question without scrolling elsewhere. Number questions continuously across all topics and sections so a recommendation is never ambiguous about which question it belongs to.
 
 Every question still needs an explicit answer - a recommendation is never adopted by default.
 
@@ -103,7 +103,7 @@ Every question needs an answer. An unanswered question stays open and blocks the
 
 Use this plan structure. If the related spec uses a label, the plan filename must use the same label (`specs/001-auth-plan.md`).
 
-Budget: 300 words per phase. A plan is a checklist, not a memo. It does not open with an inventory of the repository, does not restate the spec's requirements, and does not re-argue the questions file's decisions.
+Budget: 300 words of prose per phase, hard ceiling 500. A plan is a checklist, not a memo. It does not open with an inventory of the repository, does not restate the spec's requirements, and does not re-argue the questions file's decisions.
 
 ```md
 # Plan 001 (or 001-auth)
@@ -164,6 +164,12 @@ Use `specs/001-phase-01-review.md`, or `specs/001-auth-phase-01-review.md` when 
 ## Optional improvements
 - [ ] improvement
 
+## Deviations
+- where the work differed from the plan, and what was deferred or added
+
+## Lessons
+- only what should change a later phase; leave it empty rather than restating the plan or git
+
 ## Approval recommendation
 - approve | revise
 
@@ -171,33 +177,6 @@ Use `specs/001-phase-01-review.md`, or `specs/001-auth-phase-01-review.md` when 
 - review this artifact and implementation evidence
 - if approved, run `implement-next-phase` for the next phase or `final-review` if all phases are complete
 - example prompt: `Use the human-gated-spec-driven-ai-development skill to implement-next-phase for 001-plan.md` (or `001-auth-plan.md` when a label is used)
-```
-
-## phase retro artifact
-
-Use `specs/001-phase-01-retro.md`, or `specs/001-auth-phase-01-retro.md` when the related spec and plan use a label. Always carry the spec's label forward into the retro filename:
-
-```md
-# Phase 01 Retrospective
-
-## What changed
-- change
-
-## Checklist updates
-- completed
-- blocked
-
-## Known issues
-- issue
-
-## Risks discovered
-- risk
-
-## Recommended next step
-- next step
-
-## Approval state
-- draft pending user review | approved
 ```
 
 ## final review

@@ -49,7 +49,7 @@ If you want the shortest usable version of this workflow, do this:
 7. The AI generates a phased plan in `specs/NNN-<label>-plan.md`, and the developer reviews it, either requesting revisions or approving it.
 8. Once the spec and plan are approved, the developer should strongly consider creating a checkpoint commit before implementation begins.
 9. The AI implements one phase only, runs the full test suite, and updates the plan and related artifacts before the developer reviews the result.
-10. When a phase is approved, the AI updates `specs/NNN-<label>-phase-NN-review.md` and `specs/NNN-<label>-phase-NN-retro.md`, and the developer should strongly consider creating another checkpoint commit before beginning the next phase.
+10. When a phase is approved, the AI updates `specs/NNN-<label>-phase-NN-review.md`, including its Lessons section, and the developer should strongly consider creating another checkpoint commit before beginning the next phase.
 11. After the last phase, the developer performs a final implementation review and can either request improvements or approve completion.
 
 The label is optional; the three-digit numeric prefix is what groups artifacts in one cycle. When this README shows a filename, it uses the labeled form so the workstream is recognizable at a glance.
@@ -96,7 +96,7 @@ flowchart LR
     B --> C[Frontier model<br/>Phase 01<br/>implementation]
     B --> D[Local model<br/>Phase 02<br/>implementation<br/>or research / grep]
     B --> E[New context<br/>same model<br/>Phase 03<br/>implementation]
-    C --> F[(updated plan checklist<br/>phase review<br/>phase retro)]
+    C --> F[(updated plan checklist<br/>phase review)]
     D --> F
     E --> F
     F --> G[Developer<br/>reviews, approves,<br/>commits]
@@ -197,7 +197,7 @@ Not every task needs the full version of the process.
 | --- | --- |
 | Tiny bug fix or copy update | developer writes a short spec, AI critiques it, AI drafts a short plan, AI implements |
 | Medium feature or refactor | developer writes the spec, AI reviews and questions it, AI iterates on clarification until the spec is ready, AI drafts a phased plan, developer gates implementation |
-| High-risk or multi-session work | full workflow with numbered artifacts, developer approvals, and AI-maintained review and retrospective artifacts |
+| High-risk or multi-session work | full workflow with numbered artifacts, developer approvals, and AI-maintained review artifacts |
 
 ---
 
@@ -260,7 +260,7 @@ flowchart TD
     O -- Yes --> P[Developer reviews phase for correctness, scope, and design principles]
     P --> Q{Phase approved?}
     Q -- No --> M
-    Q -- Yes --> R[AI updates plan checklist in NNN-&lt;label&gt;-plan.md<br/>and writes NNN-&lt;label&gt;-phase-NN-review.md<br/>and NNN-&lt;label&gt;-phase-NN-retro.md]
+    Q -- Yes --> R[AI updates plan checklist in NNN-&lt;label&gt;-plan.md<br/>and writes NNN-&lt;label&gt;-phase-NN-review.md]
     R --> S[Developer may create checkpoint commit for approved phase]
     S --> T{More phases remain?}
     T -- Yes --> L
@@ -452,8 +452,7 @@ By the time the developer reaches this decision point, the plan checklist should
 
 Once a phase is approved, the AI updates the remaining durable artifacts that record the approved outcome:
 
-- `specs/NNN-<label>-phase-NN-review.md` — phase review notes
-- `specs/NNN-<label>-phase-NN-retro.md` — phase retrospective
+- `specs/NNN-<label>-phase-NN-review.md` — phase review notes, with Deviations and Lessons sections
 
 The full set of artifacts for one cycle is:
 
@@ -461,9 +460,10 @@ The full set of artifacts for one cycle is:
 - `specs/NNN-<label>-questions-YY.md` (one per clarification pass)
 - `specs/NNN-<label>-plan.md`
 - `specs/NNN-<label>-phase-NN-review.md` (one per phase, if used)
-- `specs/NNN-<label>-phase-NN-retro.md` (one per phase, if used)
 
-Those review and retro updates are not the same as validation. Validation happens in the prior step. This step records the approved outcome so the project state is accurate for the next session, agent, or phase.
+There is no retro artifact. Most of what a retro holds is already in git or the plan; deviations and lessons go in the phase review, and a lesson that should change every run goes in the project's agent instructions.
+
+Those review updates are not the same as validation. Validation happens in the prior step. This step records the approved outcome so the project state is accurate for the next session, agent, or phase.
 
 The developer can then decide whether to continue to the next phase, revise the plan, or stop the cycle.
 
@@ -498,7 +498,6 @@ specs/
   NNN-<label>-questions-02.md
   NNN-<label>-plan.md
   NNN-<label>-phase-01-review.md
-  NNN-<label>-phase-01-retro.md
   NNN+1-<label>-spec.md
   NNN+1-<label>-plan.md
 ```
@@ -510,13 +509,13 @@ Recommended rules:
 - keep numbered artifacts for durable project state
 - keep numbered questions artifacts as durable clarification history
 - use the same numeric prefix as the related spec and plan
-- if you use a label, keep the same label across the related spec, plan, questions, review, and retro artifacts
+- if you use a label, keep the same label across the related spec, plan, questions, and review artifacts
 - use a two-digit question-set suffix such as `01`, `02`, `03`
 - increment the question-set suffix each time a new clarification round is created instead of overwriting or deleting the previous one
 - treat the label as optional and human-friendly; the numeric prefix remains the primary grouping key
 - use the same numeric prefix for one spec/plan cycle
 - update the checklist as work progresses
-- leave enough state in plan, review, and retro files for a fresh session to continue
+- leave enough state in plan and review files for a fresh session to continue
 
 ---
 
@@ -710,7 +709,7 @@ To install manually instead:
 
 ### Prompt Cookbook
 
-These examples assume you are working on `specs/006-auth-spec.md` and related artifacts (`specs/006-auth-questions-YY.md`, `specs/006-auth-plan.md`, `specs/006-auth-phase-NN-review.md`, `specs/006-auth-phase-NN-retro.md`). The label is optional; the same prompts work with unlabeled names such as `specs/006-spec.md`.
+These examples assume you are working on `specs/006-auth-spec.md` and related artifacts (`specs/006-auth-questions-YY.md`, `specs/006-auth-plan.md`, `specs/006-auth-phase-NN-review.md`). The label is optional; the same prompts work with unlabeled names such as `specs/006-spec.md`.
 
 #### Start with a spec review
 

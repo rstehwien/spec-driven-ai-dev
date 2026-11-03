@@ -6,7 +6,7 @@
 > `[ ]` not started, `[-]` in progress, `[x]` completed, `[!]` blocked.
 > Leave the plan current at the end of every implementation run so a new context can pick up where the work actually stands.
 >
-> **Budget: 300 words per phase, hard ceiling 500.** State the count when you hand this back.
+> **Budget: 300 words of prose per phase, hard ceiling 500.** State the count when you hand this back.
 > **A plan is a checklist, not a memo.** Do not open it with an inventory of the repository -
 > the implementing agent can read the codebase; what it cannot derive is the intent and the order.
 > Do not restate requirements from the spec, and do not re-argue decisions from the questions file.

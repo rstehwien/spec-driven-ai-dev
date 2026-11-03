@@ -4,7 +4,7 @@
 > Replace `NNN` with a three-digit prefix (e.g., `001`, `002`).
 > An optional label (e.g., `001-auth-spec.md`) is fine; if you use one, keep it on every artifact in this cycle.
 >
-> **Budget: 1,000 words, hard ceiling 1,500.** State the count when you hand this back.
+> **Budget: 1,000 words of prose (tables and code excluded), hard ceiling 1,500.** State the count when you hand this back. Over budget, cut what isn't a requirement; never squeeze a requirement to hit the number.
 > **This document states target state only** - what is true when the work is done,
 > in present tense, as though it had always been that way.
 >

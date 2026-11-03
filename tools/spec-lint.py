@@ -72,8 +72,14 @@ def strip_code(text):
     return "\n".join(out)
 
 
+def strip_tables(text):
+    """Blank out markdown table rows: a values table is scanned, not read, so it
+    does not count toward the prose budget."""
+    return "\n".join("" if line.lstrip().startswith("|") else line for line in text.splitlines())
+
+
 def words(text):
-    return len(strip_code(text).split())
+    return len(strip_tables(strip_code(text)).split())
 
 
 def artifact_type(path):
@@ -108,10 +114,11 @@ def check_budget(text, kind, label="document"):
     lo, hi = BUDGET[kind]
     n = words(text)
     if n > hi:
-        return [("ERROR", 1, f"{label} is {n} words, over the {hi}-word ceiling")]
+        return [("ERROR", 1, f"{label} is {n} prose words, over the {hi}-word ceiling")]
     if n > lo:
-        return [("WARN", 1, f"{label} is {n} words, over the {lo}-word budget")]
-    return [("INFO", 1, f"{label} is {n} words, within the {lo}-word budget")]
+        return [("WARN", 1, f"{label} is {n} prose words, over the {lo}-word budget; "
+                         "fine if the extra is requirements, not history or rationale")]
+    return [("INFO", 1, f"{label} is {n} prose words, within the {lo}-word budget")]
 
 
 def check_density(text):

@@ -153,8 +153,7 @@ Artifacts under `specs/`:
 - `NNN-<label>-spec.md`
 - `NNN-<label>-questions-YY.md` (numbered clarification history)
 - `NNN-<label>-plan.md` (with `[ ] [-] [x] [!]` checklist states)
-- `NNN-<label>-phase-NN-review.md` (optional)
-- `NNN-<label>-phase-NN-retro.md` (optional)
+- `NNN-<label>-phase-NN-review.md` (optional, with Deviations and Lessons sections)
 
 **Clarification model.** Durable, numbered, file-based. The AI writes open questions into `NNN-<label>-questions-YY.md`. The developer answers them inline using a blockquote convention:
 

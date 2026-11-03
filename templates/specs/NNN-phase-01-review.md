@@ -43,6 +43,16 @@
 - separation of concerns, coupling, cohesion, testability
 - architectural fit with the broader project
 
+## Deviations
+
+- [where the implementation differed from the plan, and why]
+- [items deferred to a later phase, or added to the plan]
+
+## Lessons
+
+- [only what should change a later phase; leave empty rather than restating the plan or git]
+- [a lesson that should change every run belongs in the project's agent instructions file instead]
+
 ## Recommendation
 
 - [continue to next phase / revise this phase / pause for developer judgment]
